@@ -1,0 +1,31 @@
+name: sanity-check
+on:
+  push:
+    branches:
+      - '*'
+    paths:
+      - 'src/'
+      - 'include/'
+
+
+jobs:
+  Makefile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build with Makefile
+        run: make
+  Meson:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: | 
+            sudo apt-get update 
+            sudo apt-get install -y build-essential ninja-build
+            python3 -m pip install meson
+      - name: Build with Meson
+        run: meson build && ninja -C build
