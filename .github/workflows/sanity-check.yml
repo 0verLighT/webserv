@@ -4,8 +4,8 @@ on:
     branches:
       - '*'
     paths:
-      - 'src/'
-      - 'include/'
+      - 'src/**'
+      - 'include/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -31,4 +31,6 @@ jobs:
             sudo apt-get install -y build-essential ninja-build
             python3 -m pip install meson
       - name: Build with Meson
-        run: meson build && ninja -C build
+        run: |
+            meson setup build
+            meson compile -C build
