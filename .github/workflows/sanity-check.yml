@@ -1,11 +1,19 @@
 name: sanity-check
 on:
   push:
+<<<<<<< HEAD
     branches:
       - '*'
     paths:
       - 'src/**'
       - 'include/**'
+=======
+	branches:
+	  - '*'
+	paths:
+	  - 'src/'
+	  - 'include/'
+>>>>>>> 5d53859 (chore: updated .gitignore)
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -13,12 +21,13 @@ concurrency:
 
 jobs:
   Makefile:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - name: Build with Makefile
-        run: make
+	runs-on: ubuntu-latest
+	steps:
+	  - uses: actions/checkout@v6
+	  - name: Build with Makefile
+		run: make
   Meson:
+<<<<<<< HEAD
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -34,3 +43,18 @@ jobs:
         run: |
             meson setup build
             meson compile -C build
+=======
+	runs-on: ubuntu-latest
+	steps:
+	  - uses: actions/checkout@v6
+	  - uses: actions/setup-python@v6
+		with:
+		  python-version: '3.11'
+	  - name: Install dependencies
+		run: |
+			sudo apt-get update
+			sudo apt-get install -y build-essential ninja-build
+			python3 -m pip install meson
+	  - name: Build with Meson
+		run: meson build && ninja -C build
+>>>>>>> 5d53859 (chore: updated .gitignore)
