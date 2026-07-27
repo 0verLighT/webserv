@@ -1,12 +1,9 @@
-#ifndef CGI_HPP
-# define CGI_HPP
+#pragma once
 
 # include <iostream>
 # include <sys/types.h>
 # include <sys/wait.h>
 # include <unistd.h>
-
-
 
 class CGI
 {
@@ -27,5 +24,3 @@ public:
 	void	processInput(std::string input);
 	void	createSubprocess(const std::string& filename, const std::string& args);
 };
-
-#endif

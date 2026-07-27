@@ -7,4 +7,5 @@ SOURCES = \
 	src/HttpResponse.cpp \
 	src/RequestHandler.cpp \
 	src/utils.cpp \
-	src/TOMLParser.cpp
+	src/TOMLParser.cpp \
+	src/CGI.cpp
