@@ -1,1 +1,4 @@
-SOURCES = src/main.cpp
+SOURCES = \
+	src/main.cpp \
+	src/Server.cpp \
+	src/Client.cpp

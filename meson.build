@@ -6,7 +6,11 @@ project(
   meson_version: '>= 0.58.0'
 )
 
-sources = files('src/main.cpp')
+sources = files(
+  'src/main.cpp',
+  'src/Server.cpp',
+  'src/Client.cpp',
+)
 
 inc = include_directories('include')
 
