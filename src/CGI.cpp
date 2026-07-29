@@ -28,6 +28,8 @@ CGI::~CGI() {
 	// std::cout << "CGI destructor called" << std::endl;
 }
 
+/*================ MEMBERS ================*/
+
 void CGI::processInput(std::string input)
 {
 	(void)input;
