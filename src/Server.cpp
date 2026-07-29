@@ -24,7 +24,7 @@ Server::Server(int port): _port(port) {
   this->_socket = socket(AF_INET, SOCK_STREAM, 0);
   int opt = 1;
   if (setsockopt(_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
-      perror("setsockopt");
+    throw std::runtime_error("setsockopt: " + std::string(strerror(errno)));
   }
   if (_socket == -1) {
     throw std::runtime_error("socket: " + std::string(strerror(errno)));
