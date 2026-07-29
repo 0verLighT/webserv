@@ -10,6 +10,7 @@ sources = files(
   'src/main.cpp',
   'src/Server.cpp',
   'src/Client.cpp',
+  'src/HttpRequest.cpp',
 )
 
 inc = include_directories('include')

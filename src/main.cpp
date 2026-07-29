@@ -3,7 +3,10 @@
 #include <iostream>
 
 int main(int argc, char **argv) {
-  (void)argc;
+  // until Configuration File aren't aviable
+  if (argc != 1) {
+    std::cerr << "Usage" << std::endl;
+  }
   (void)argv;
   try {
     Server Server(8080);
