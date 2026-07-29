@@ -17,6 +17,7 @@ void handlerSignal(int sig) {
 }
 
 Server::Server(int port): _port(port) {
+  memset(&_serverAddress, 0, sizeof(_serverAddress));
   this->_serverAddress.sin_family = AF_INET;
   this->_serverAddress.sin_port = htons(_port);
   this->_serverAddress.sin_addr.s_addr = INADDR_ANY;
@@ -26,13 +27,13 @@ Server::Server(int port): _port(port) {
       perror("setsockopt");
   }
   if (_socket == -1) {
-    throw std::runtime_error("socket");
+    throw std::runtime_error("socket: " + std::string(strerror(errno)));
   };
   if (bind(_socket, (struct sockaddr*)&_serverAddress, sizeof(_serverAddress)) == -1) {
-    throw std::runtime_error("bind");
+    throw std::runtime_error("bind: " + std::string(strerror(errno)));
   };
   if (listen(_socket, 5) == -1) {
-    throw std::runtime_error("listen");
+    throw std::runtime_error("listen: " + std::string(strerror(errno)));
   };
 }
 
@@ -58,8 +59,8 @@ void Server::run() {
         break;
       std::cerr << "select" << std::endl;
       continue;
-    if (activity == 0)
     }
+    if (activity == 0)
       continue;
     if (FD_ISSET(_socket, &set)) {
       int clientSocket = accept(_socket, NULL, NULL);
@@ -67,7 +68,7 @@ void Server::run() {
         std::cerr << "accept: " << strerror(errno) << std::endl;
         continue;
       };
-      Client Client(clientSocket);
+      Client client(clientSocket);
     }
   }
 }

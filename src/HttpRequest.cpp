@@ -1,5 +1,6 @@
 #include "HttpRequest.hpp"
 #include <iostream>
+#include <sys/socket.h>
 
 
 int call = 0;

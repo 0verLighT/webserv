@@ -1,5 +1,4 @@
 #pragma once
-#include "HttpRequest.hpp"
 #include <cstddef>
 #include <sys/socket.h>
 
