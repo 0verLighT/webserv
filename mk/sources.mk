@@ -6,4 +6,5 @@ SOURCES = \
 	src/Logger.cpp \
 	src/HttpResponse.cpp \
 	src/RequestHandler.cpp \
-	src/utils.cpp
+	src/utils.cpp \
+	src/TOMLParser.cpp
