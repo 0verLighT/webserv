@@ -29,20 +29,17 @@ bool TOMLParser::isValidTable(std::string line)
 	trimmed.erase(trimmed.find_last_not_of(" \t") + 1);
 
 	size_t op = line.find_first_of('[');
-	// std::cout << "op = " << op <<std::endl;
-	// size_t ed = line.find_last_of(']');
 	size_t ed = line.find(']', op);
-	// std::cout << "ed = " << ed <<std::endl;
 
 	if (op == std::string::npos ||
 		ed == std::string::npos ||
 		line[ed + 1])
 	{
-		std::cout << "'" << line << "' is an invalid table." << std::endl;
+		std::cout << "`" << line << "` is an invalid table." << std::endl;
 		return (false);
 	}
 
-	std::cout << "'" << line << "' is a valid table." << std::endl;
+	std::cout << "`" << line << "` is a valid table." << std::endl;
 	return (true);
 }
 
@@ -58,7 +55,7 @@ bool TOMLParser::isValidPair(std::string line)
 
 	if (eqPos == std::string::npos)
 	{
-		std::cout << "'" << line << "' is an invalid pair." << std::endl;
+		std::cout << "`" << line << "` is an invalid pair." << std::endl;
 		return (false);
 	}
 
@@ -72,19 +69,52 @@ bool TOMLParser::isValidPair(std::string line)
 
 	if (key.empty() || value.empty() || value.size() < 2 || value[0] != '"' || value[value.size() - 1] != '"')
 	{
-		// std::cout << "key = '" << key << "'" << std::endl;
-		// std::cout << "value = '" << value << "'" << std::endl;
-		std::cout << "'" << line << "' is an invalid pair." << std::endl;
+		std::cout << "`" << line << "` is an invalid pair." << std::endl;
 		return (false);
 	}
-
-	// std::cout << "key = '" << key << "'" << std::endl;
-	// std::cout << "value = '" << value << "'" << std::endl;
-	std::cout << "'" << line << "' is a valid pair." << std::endl;
+	std::cout << "`" << line << "` is a valid pair." << std::endl;
 	return (true);
 }
 
+bool TOMLParser::isValidKey(std::string key)
+{
+	(void)key;
+	return (true);
+}
+
+bool TOMLParser::isValidValue(std::string value)
+{
+	(void)value;
+	return (true);
+}
+
+bool TOMLParser::isBool(std::string value)
+{
+	return (value == "true" || value == "false");
+}
+
 /*=============== CONVERTERS ===============*/
+
+int TOMLParser::toInt(std::string valueString)
+{
+	int value;
+	std::istringstream iss(valueString);
+	iss >> value;
+}
+
+float TOMLParser::toFloat(std::string valueString)
+{
+	float value;
+	std::istringstream iss(valueString);
+	iss >> value;
+}
+
+void TOMLParser::toBool(std::string valueString)
+{
+	bool value;
+	std::istringstream iss(valueString);
+	iss >> value;
+}
 
 /*=============== ERRORS ===============*/
 
