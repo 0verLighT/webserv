@@ -1,5 +1,6 @@
 #include "Client.hpp"
 #include "HttpRequest.hpp"
+#include "Logger.hpp"
 #include <iostream>
 #include <unistd.h>
 
@@ -11,5 +12,5 @@ Client::Client(int socket) : _socket(socket) {
 
 Client::~Client() {
   close(_socket);
-  std::cout << "Client : " << _socket << " was destroyed" << std::endl;
+  Logger::info("Client : " + Logger::to_string(_socket) + " was destroyed");
 }

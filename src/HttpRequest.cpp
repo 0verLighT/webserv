@@ -1,9 +1,8 @@
 #include "HttpRequest.hpp"
+#include "Logger.hpp"
 #include <iostream>
 #include <sys/socket.h>
 
-
-int call = 0;
 
 HttpRequest::HttpRequest() {}
 
@@ -13,11 +12,8 @@ std::string HttpRequest::ReadRequest(int socket) {
   if (bytesRead == -1) {
     throw std::runtime_error("byte");
   }
-  std::cout << buffer << std::endl;
-  call++;
-
-  std::cout << "call " << call << "\n";
-  return (buffer);
+  Logger::debug(buffer);
+  return (std::string(buffer));
 }
 
 HttpRequest::~HttpRequest() {}
