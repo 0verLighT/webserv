@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <sstream>
+#include <ctime>
 
 #define RED "\033[31m"
 #define GREEN "\033[32m"
