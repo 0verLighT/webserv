@@ -88,9 +88,23 @@ bool TOMLParser::isValidValue(std::string value)
 	return (true);
 }
 
-bool TOMLParser::isBool(std::string value)
+bool TOMLParser::isInt(std::string valueString)
 {
-	return (value == "true" || value == "false");
+	int value;
+	std::istringstream iss(valueString);
+	return (iss >> value) && iss.eof();
+}
+
+bool TOMLParser::isFloat(std::string valueString)
+{
+	float value;
+	std::istringstream iss(valueString);
+	return (iss >> value) && iss.eof();
+}
+
+bool TOMLParser::isBool(std::string valueString)
+{
+	return (valueString == "true" || valueString == "false");
 }
 
 /*=============== CONVERTERS ===============*/
@@ -100,6 +114,7 @@ int TOMLParser::toInt(std::string valueString)
 	int value;
 	std::istringstream iss(valueString);
 	iss >> value;
+	return (value);
 }
 
 float TOMLParser::toFloat(std::string valueString)
@@ -107,13 +122,15 @@ float TOMLParser::toFloat(std::string valueString)
 	float value;
 	std::istringstream iss(valueString);
 	iss >> value;
+	return (value);
 }
 
-void TOMLParser::toBool(std::string valueString)
+bool TOMLParser::toBool(std::string valueString)
 {
-	bool value;
-	std::istringstream iss(valueString);
-	iss >> value;
+	if (valueString == "true")
+		return (true);
+	else
+		return (false);
 }
 
 /*=============== ERRORS ===============*/

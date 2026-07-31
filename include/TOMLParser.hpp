@@ -31,13 +31,15 @@ public:
 	bool isValidKey(std::string key);
 	bool isValidValue(std::string value);
 
-	bool isBool(std::string value);
+	bool isInt(std::string valueString);
+	bool isFloat(std::string valueString);
+	bool isBool(std::string valueString);
 
 	/*=============== CONVERTERS ===============*/
 
 	int toInt(std::string valueString);
 	float toFloat(std::string valueString);
-	void toBool(std::string value);
+	bool toBool(std::string value);
 
 	/*=============== ERRORS ===============*/
 
