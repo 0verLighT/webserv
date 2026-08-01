@@ -11,13 +11,8 @@ private:
 	std::map<std::string, std::string>	_data;
 
 public:
-	/*=============== BUILDERS ===============*/
-
-	// Default Constructor
 	TOMLParser();
-	// Destructor
 	~TOMLParser();
-
 	/*=============== GETTERS ===============*/
 
 	// std::string getKey();

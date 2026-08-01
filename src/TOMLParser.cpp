@@ -88,6 +88,24 @@ bool TOMLParser::isValidValue(std::string value)
 	return (true);
 }
 
+/**
+int5 = 1_000
+int6 = 5_349_221
+int7 = 53_49_221
+int8 = 1_2_3_4_5
+
+# hexadecimal with prefix `0x`
+hex1 = 0xDEADBEEF
+hex2 = 0xdeadbeef
+hex3 = 0xdead_beef
+
+# octal with prefix `0o`
+oct1 = 0o01234567
+oct2 = 0o755
+
+# binary with prefix `0b`
+bin1 = 0b11010110
+ */
 bool TOMLParser::isInt(std::string valueString)
 {
 	int value;
