@@ -3,6 +3,7 @@
 #include <iostream>
 #include <sstream>
 #include <map>
+#include "utils.hpp"
 
 class TOMLParser
 {
@@ -29,12 +30,13 @@ public:
 	bool isInt(std::string valueString);
 	bool isFloat(std::string valueString);
 	bool isBool(std::string valueString);
+	bool isBase(std::string valueString);
 
 	/*=============== CONVERTERS ===============*/
 
-	int toInt(std::string valueString);
-	float toFloat(std::string valueString);
-	bool toBool(std::string value);
+	int		toInt(std::string valueString);
+	float	toFloat(std::string valueString);
+	bool	toBool(std::string valueString);
 
 	/*=============== ERRORS ===============*/
 

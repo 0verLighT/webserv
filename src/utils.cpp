@@ -33,3 +33,40 @@ std::string trim(const std::string& s, const std::string& rm)
 		trimmed.erase(pos, rm.size());
 	return (trimmed);
 }
+
+/*=============== NUMBER UTILS ===============*/
+
+int anyBaseToInt(const std::string& number, int base)
+{
+	int res = 0;
+	std::size_t i = 0;
+	bool neg = false;
+
+	if (!number.empty() && (number[0] == '+' || number[0] == '-'))
+	{
+		neg = (number[0] == '-');
+		i = 1;
+	}
+
+	if (i == number.size())
+		throw std::invalid_argument("Invalid number.");
+
+	for (; i < number.size(); ++i)
+	{
+		char c = std::toupper(static_cast<unsigned char>(number[i]));
+		int digit;
+
+		if (c >= '0' && c <= '9')
+			digit = c - '0';
+		else if (c >= 'A' && c <= 'Z')
+			digit = c - 'A' + 10;
+		else
+			throw std::invalid_argument("Invalid character in number.");
+		if (digit >= base)
+			throw std::invalid_argument("Digit out of range for base.");
+		if (res > (std::numeric_limits<int>::max() - digit) / base)
+			throw std::overflow_error("Integer overflow.");
+		res = res * base + digit;
+	}
+	return (neg ? -res : res);
+}
