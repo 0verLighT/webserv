@@ -1,5 +1,6 @@
 #include "Server.hpp"
 #include "Client.hpp"
+#include "HttpRequest.hpp"
 #include "Logger.hpp"
 #include <cerrno>
 #include <csignal>
@@ -9,21 +10,20 @@
 #include <unistd.h>
 #include <string.h>
 
-int EventLoop = 1;
+int eventLoop = 1;
 
 //! TODO : implement logger when signal are trigger
 void handlerSignal(int sig) {
   (void)sig;
-  EventLoop = 0;
+  eventLoop = 0;
 }
 
 Server::Server(int port): _port(port) {
   Logger::info("Server Created");
-  memset(&_serverAddress, 0, sizeof(_serverAddress));
-  this->_serverAddress.sin_family = AF_INET;
-  this->_serverAddress.sin_port = htons(_port);
-  this->_serverAddress.sin_addr.s_addr = INADDR_ANY;
-  this->_socket = socket(AF_INET, SOCK_STREAM, 0);
+  _serverAddress.sin_family =  AF_INET;
+  _serverAddress.sin_port = htons(_port);
+  _serverAddress.sin_addr.s_addr = INADDR_ANY;
+  _socket = socket(AF_INET, SOCK_STREAM, 0);
   Logger::info("Socket Created at " + Logger::to_string(_port));
   int opt = 1;
   if (setsockopt(_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
@@ -48,7 +48,7 @@ Server::~Server() {
 void Server::run() {
   signal(SIGINT, handlerSignal);
   // Catch Crtl + C signal
-  while (EventLoop) {
+  while (eventLoop) {
     fd_set set;
     FD_ZERO(&set);
     FD_SET(_socket, &set);
@@ -58,7 +58,7 @@ void Server::run() {
     timeout.tv_usec = 0;
     int activity = select(_socket + 1, &set, NULL, NULL, &timeout);
     if (activity == -1) {
-      if (!EventLoop)
+      if (!eventLoop)
         break;
       std::cerr << "select" << std::endl;
       continue;
@@ -72,6 +72,9 @@ void Server::run() {
         continue;
       };
       Client client(clientSocket);
+      HttpRequest req;
+
+      req.parseRequest(client.getReqBuffer());
     }
   }
 }

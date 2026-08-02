@@ -1,13 +1,20 @@
 #include "Client.hpp"
-#include "HttpRequest.hpp"
 #include "Logger.hpp"
-#include <iostream>
+#include <cerrno>
+#include <cstring>
 #include <unistd.h>
 
 Client::Client(int socket) : _socket(socket) {
-  HttpRequest req;
+  char buffer[1024] = {0};
+  ssize_t bytesRead = recv(socket, buffer, sizeof(buffer), 0);
+  if (bytesRead == -1) {
+    throw std::runtime_error("recv " + std::string(strerror(errno)));
+  }
+  _reqBuffer = std::string(buffer, bytesRead);
+}
 
-  req.ReadRequest(_socket);
+std::string Client::getReqBuffer() const {
+  return _reqBuffer;
 }
 
 Client::~Client() {

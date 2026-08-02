@@ -12,34 +12,28 @@ HttpRequest::HttpRequest() : _method(UNKNOWN), _headers(), _body() {
   _methodMap["UNKNOWN"] = UNKNOWN;
 }
 
-void HttpRequest::ReadRequest(int socket) {
-  char buffer[1024] = {0};
-  ssize_t bytesRead = recv(socket, buffer, sizeof(buffer), 0);
-  if (bytesRead == -1) {
-    throw std::runtime_error("byte");
-  }
-  std::string request(buffer);
-  size_t pos = request.find("\r\n\r\n");
+void HttpRequest::parseRequest(std::string buffer) {
+  size_t pos = buffer.find("\r\n\r\n");
   if (pos != std::string::npos) {
-    _body = request.substr(pos + 4);
-    request = request.substr(0, pos);
+    _body = buffer.substr(pos + 4);
+    buffer = buffer.substr(0, pos);
   }
 
-  size_t headerEnd = request.find("\r\n");
+  size_t headerEnd = buffer.find("\r\n");
   if (headerEnd != std::string::npos) {
-    std::string FristLine = request.substr(0, headerEnd);
+    std::string fristLine = buffer.substr(0, headerEnd);
 
-    _method = ParseMethod(FristLine);
-    _path = ParsePath(FristLine);
-    _headers = ParseHeaders(request.substr(headerEnd + 2));
+    _method = parseMethod(fristLine);
+    _path = parsePath(fristLine);
+    _headers = parseHeaders(buffer.substr(headerEnd + 2));
   }
 }
 
-std::string HttpRequest::GetHeader(std::string key) const {
+std::string HttpRequest::getHeader(std::string key) const {
   return _headers.at(key);
 }
 
-std::map<std::string, std::string> HttpRequest::ParseHeaders(std::string req) const {
+std::map<std::string, std::string> HttpRequest::parseHeaders(std::string req) const {
   std::map<std::string, std::string> headers;
   size_t pos = 0;
   while ((pos = req.find("\r\n")) != std::string::npos) {
@@ -55,7 +49,7 @@ std::map<std::string, std::string> HttpRequest::ParseHeaders(std::string req) co
   return headers;
 }
 
-HttpMethod HttpRequest::ParseMethod(std::string req) const {
+HttpMethod HttpRequest::parseMethod(std::string req) const {
   size_t pos = req.find(" ");
   if (pos != std::string::npos) {
     req = req.substr(0, pos);
@@ -67,7 +61,7 @@ HttpMethod HttpRequest::ParseMethod(std::string req) const {
   return UNKNOWN;
 }
 
-std::string HttpRequest::ParsePath(std::string req) const {
+std::string HttpRequest::parsePath(std::string req) const {
   size_t pos = req.find(" ");
   if (pos != std::string::npos) {
     std::string path = req.substr(pos + 1, req.find(" ", pos + 1) - pos - 1);
@@ -88,19 +82,19 @@ std::string HttpRequest::ParsePath(std::string req) const {
 }
 
 
-HttpMethod HttpRequest::GetMethod() const {
+HttpMethod HttpRequest::getMethod() const {
   return _method;
 }
 
-std::string HttpRequest::GetPath() const {
+std::string HttpRequest::getPath() const {
   return _path;
 }
 
-std::map<std::string, std::string> HttpRequest::GetHeaders() const {
+std::map<std::string, std::string> HttpRequest::getHeaders() const {
   return _headers;
 }
 
-std::string HttpRequest::GetBody() const {
+std::string HttpRequest::getBody() const {
   return _body;
 }
 
