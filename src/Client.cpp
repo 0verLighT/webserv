@@ -13,6 +13,10 @@ Client::Client(int socket) : _socket(socket) {
   _reqBuffer = std::string(buffer, bytesRead);
 }
 
+int Client::getSocket() const {
+  return _socket;
+}
+
 std::string Client::getReqBuffer() const {
   return _reqBuffer;
 }

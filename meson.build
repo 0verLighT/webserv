@@ -7,11 +7,12 @@ project(
 )
 
 sources = files(
-  'src/main.cpp',
-  'src/Server.cpp',
   'src/Client.cpp',
   'src/HttpRequest.cpp',
+  'src/HttpResponse.cpp',
   'src/Logger.cpp',
+  'src/Server.cpp',
+  'src/main.cpp',
 )
 
 inc = include_directories('include')
