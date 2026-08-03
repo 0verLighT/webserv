@@ -2,6 +2,7 @@
 #include "Client.hpp"
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
+#include "RequestHandler.hpp"
 #include "Logger.hpp"
 #include <cerrno>
 #include <csignal>
@@ -78,6 +79,8 @@ void Server::run() {
 
       req.parseRequest(client.getReqBuffer());
       HttpResponse res(req.getBody(), HttpStatus::OK, client.getSocket());
+      RequestHandler handler(req, res);
+      handler.handleMethod();
       res.sendHttpResponse();
       Logger::info("end");
     }

@@ -11,6 +11,7 @@ sources = files(
   'src/HttpRequest.cpp',
   'src/HttpResponse.cpp',
   'src/Logger.cpp',
+  'src/RequestHandler.cpp',
   'src/Server.cpp',
   'src/main.cpp',
 )

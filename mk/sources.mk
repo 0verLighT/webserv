@@ -4,4 +4,5 @@ SOURCES = \
 	src/Client.cpp \
 	src/HttpRequest.cpp \
 	src/Logger.cpp \
-	src/HttpResponse.cpp
+	src/HttpResponse.cpp \
+	src/RequestHandler.cpp
