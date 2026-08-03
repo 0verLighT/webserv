@@ -10,6 +10,7 @@
 #include <sys/select.h>
 #include <unistd.h>
 #include <string.h>
+#include "enum/HttpStatus.hpp"
 
 int eventLoop = 1;
 
@@ -76,7 +77,7 @@ void Server::run() {
       HttpRequest req;
 
       req.parseRequest(client.getReqBuffer());
-      HttpResponse res(req.getBody(), OK, client.getSocket());
+      HttpResponse res(req.getBody(), HttpStatus::OK, client.getSocket());
       res.sendHttpResponse();
       Logger::info("end");
     }

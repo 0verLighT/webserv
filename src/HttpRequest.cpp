@@ -2,14 +2,15 @@
 #include "Logger.hpp"
 #include <iostream>
 #include <sys/socket.h>
+#include "enum/HttpMethod.hpp"
 
 
-HttpRequest::HttpRequest() : _method(UNKNOWN), _headers(), _body() {
-  _methodMap["GET"] = GET;
-  _methodMap["POST"] = POST;
-  _methodMap["DELETE"] = DELETE;
-  _methodMap["PUT"] = PUT;
-  _methodMap["UNKNOWN"] = UNKNOWN;
+HttpRequest::HttpRequest() : _method(HttpMethod::UNKNOWN), _headers(), _body() {
+  _methodMap["GET"] = HttpMethod::GET;
+  _methodMap["POST"] = HttpMethod::POST;
+  _methodMap["DELETE"] = HttpMethod::DELETE;
+  _methodMap["PUT"] = HttpMethod::PUT;
+  _methodMap["UNKNOWN"] = HttpMethod::UNKNOWN;
 }
 
 void HttpRequest::parseRequest(std::string buffer) {
@@ -49,16 +50,16 @@ std::map<std::string, std::string> HttpRequest::parseHeaders(std::string req) co
   return headers;
 }
 
-HttpMethod HttpRequest::parseMethod(std::string req) const {
+HttpMethod::Code HttpRequest::parseMethod(std::string req) const {
   size_t pos = req.find(" ");
   if (pos != std::string::npos) {
     req = req.substr(0, pos);
   }
-  std::map<std::string, HttpMethod>::const_iterator it = _methodMap.find(req);
+  std::map<std::string, HttpMethod::Code>::const_iterator it = _methodMap.find(req);
   if (it != _methodMap.end()) {
     return it->second;
   }
-  return UNKNOWN;
+  return HttpMethod::UNKNOWN;
 }
 
 std::string HttpRequest::parsePath(std::string req) const {
@@ -82,7 +83,7 @@ std::string HttpRequest::parsePath(std::string req) const {
 }
 
 
-HttpMethod HttpRequest::getMethod() const {
+HttpMethod::Code HttpRequest::getMethod() const {
   return _method;
 }
 
