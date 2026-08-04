@@ -15,10 +15,10 @@
 
 int eventLoop = 1;
 
-//! TODO : implement logger when signal are trigger
 void handlerSignal(int sig) {
   (void)sig;
   eventLoop = 0;
+  Logger::info("Signal " + Logger::to_string(sig) + " received");
 }
 
 Server::Server(int port): _port(port) {
@@ -79,10 +79,9 @@ void Server::run() {
 
       req.parseRequest(client.getReqBuffer());
       HttpResponse res(req.getBody(), HttpStatus::OK, client.getSocket());
-      RequestHandler handler(req, res);
+      RequestHandler handler(req, client.getSocket());
       handler.handleMethod();
-      res.sendHttpResponse();
-      Logger::info("end");
+      Logger::info("Cycle Event Loop");
     }
   }
 }

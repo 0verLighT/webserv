@@ -6,10 +6,15 @@
 
 class RequestHandler {
   public:
-    RequestHandler(HttpRequest req, HttpResponse res);
+    RequestHandler(HttpRequest req, int socket);
     void handleMethod();
     ~RequestHandler();
   private:
     HttpRequest _req;
-    HttpResponse _res;
+    int _socket;
+
+    HttpResponse handleGet();
+    HttpResponse handlePost();
+    HttpResponse handlePut();
+    HttpResponse handleDelete();
 };
