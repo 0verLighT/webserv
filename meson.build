@@ -14,6 +14,7 @@ sources = files(
   'src/RequestHandler.cpp',
   'src/Server.cpp',
   'src/main.cpp',
+  'src/utils.cpp'
 )
 
 inc = include_directories('include')

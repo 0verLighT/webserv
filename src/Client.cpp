@@ -3,6 +3,7 @@
 #include <cerrno>
 #include <cstring>
 #include <unistd.h>
+#include "utils.hpp"
 
 Client::Client(int socket) : _socket(socket) {
   char buffer[1024] = {0};
@@ -23,5 +24,5 @@ std::string Client::getReqBuffer() const {
 
 Client::~Client() {
   close(_socket);
-  Logger::info("Client : " + Logger::to_string(_socket) + " was destroyed");
+  Logger::info("Client : " + to_string(_socket) + " was destroyed");
 }

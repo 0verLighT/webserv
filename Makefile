@@ -9,7 +9,7 @@ include $(CWD)/mk/sources.mk
 NAME = webserv
 CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -Iinclude -g
-BUILD_DIR = build/
+BUILD_DIR = obj/
 OBJS = $(addprefix $(BUILD_DIR), $(SOURCES:.cpp=.o))
 
 all: $(NAME)

@@ -9,7 +9,7 @@
 
 class HttpResponse {
   public:
-    HttpResponse(std::string _body, HttpStatus::Code _status, int _socket);
+    HttpResponse(std::string _body, HttpStatus::Code _status, int _socket, std::string contentType);
     std::string serialize();
     void sendHttpResponse();
     std::string getSentenceResponseHttpStatus(HttpStatus::Code status) const;
@@ -18,5 +18,6 @@ class HttpResponse {
     std::string _body;
     HttpStatus::Code _status;
     std::string _response;
+    std::string _contentType;
     int _socket;
 };

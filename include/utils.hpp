@@ -1,0 +1,13 @@
+#pragma once
+
+#include <string>
+#include <sstream>
+
+template<typename T>
+static std::string to_string(const T& value) {
+  std::ostringstream oss;
+  oss << value;
+  return oss.str();
+}
+
+const std::string getExtenstionFormPath(const std::string &path);

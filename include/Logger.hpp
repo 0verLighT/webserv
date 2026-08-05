@@ -23,12 +23,7 @@ public:
     static void debug(const T& message) {
       std::cout << getTimestamp() << BLUE << " DEBUG "<< std::endl << RESET << message << std::endl;
     }
-    template<typename T>
-    static std::string to_string(const T& value) {
-      std::ostringstream oss;
-      oss << value;
-      return oss.str();
-    }
+
 private:
     static void log(const std::string& level, const std::string& message, const std::string& color);
     static std::string getTimestamp();

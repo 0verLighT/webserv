@@ -1,4 +1,5 @@
 #include "Server.hpp"
+#include "utils.hpp"
 #include "Client.hpp"
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
@@ -18,7 +19,7 @@ int eventLoop = 1;
 void handlerSignal(int sig) {
   (void)sig;
   eventLoop = 0;
-  Logger::info("Signal " + Logger::to_string(sig) + " received");
+  Logger::info("Signal " + to_string(sig) + " received");
 }
 
 Server::Server(int port): _port(port) {
@@ -27,7 +28,7 @@ Server::Server(int port): _port(port) {
   _serverAddress.sin_port = htons(_port);
   _serverAddress.sin_addr.s_addr = INADDR_ANY;
   _socket = socket(AF_INET, SOCK_STREAM, 0);
-  Logger::info("Socket Created at " + Logger::to_string(_port));
+  Logger::info("Socket Created at " + to_string(_port));
   int opt = 1;
   if (setsockopt(_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
     throw std::runtime_error("setsockopt: " + std::string(strerror(errno)));
@@ -78,7 +79,6 @@ void Server::run() {
       HttpRequest req;
 
       req.parseRequest(client.getReqBuffer());
-      HttpResponse res(req.getBody(), HttpStatus::OK, client.getSocket());
       RequestHandler handler(req, client.getSocket());
       handler.handleMethod();
       Logger::info("Cycle Event Loop");

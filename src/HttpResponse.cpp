@@ -1,10 +1,9 @@
 #include "HttpResponse.hpp"
 #include "Logger.hpp"
-#include "enum/ContentType.hpp"
 #include "enum/HttpStatus.hpp"
 
-HttpResponse::HttpResponse(std::string _body, HttpStatus::Code _status, int socket)
-  : _body(_body), _status(_status), _socket(socket)  {
+HttpResponse::HttpResponse(std::string _body, HttpStatus::Code _status, int socket, std::string contentType)
+  : _body(_body), _status(_status),  _contentType(contentType), _socket(socket) {
     _response = serialize();
 }
 
@@ -13,7 +12,7 @@ std::string HttpResponse::serialize() {
     std::stringstream res;
     res << "HTTP/1.1 " << _status << " " << getSentenceResponseHttpStatus(_status) << "\r\n";
     res << "Content-Length: " << _body.length() << "\r\n";
-    res << "Content-Type: " << ContentType::APPLICATION_JSON << "\r\n";
+    res << "Content-Type: " << _contentType << "\r\n";
     res << "\r\n";
     res << _body;
     return res.str();
