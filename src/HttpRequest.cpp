@@ -1,6 +1,8 @@
 #include "HttpRequest.hpp"
 #include "Logger.hpp"
 #include <iostream>
+#include <iterator>
+#include <string>
 #include <sys/socket.h>
 #include "enum/HttpMethod.hpp"
 
@@ -17,13 +19,17 @@ void HttpRequest::parseRequest(std::string buffer) {
   size_t pos = buffer.find("\r\n\r\n");
   if (pos != std::string::npos) {
     _body = buffer.substr(pos + 4);
-    buffer = buffer.substr(0, pos);
+    buffer = buffer.substr(0, pos + 2);
   }
 
   size_t headerEnd = buffer.find("\r\n");
   if (headerEnd != std::string::npos) {
     std::string fristLine = buffer.substr(0, headerEnd);
 
+    _httpVersion = parseHttpVersion(fristLine);
+    if (_httpVersion != "1.1") {
+      // throw 505 error page
+    }
     _method = parseMethod(fristLine);
     _path = parsePath(fristLine);
     _headers = parseHeaders(buffer.substr(headerEnd + 2));
@@ -31,7 +37,11 @@ void HttpRequest::parseRequest(std::string buffer) {
 }
 
 std::string HttpRequest::getHeader(std::string key) const {
-  return _headers.at(key);
+  std::map<std::string, std::string>::const_iterator it = _headers.find(key);
+  if (it != _headers.end()) {
+    return it->second;
+  }
+  return "";
 }
 
 std::map<std::string, std::string> HttpRequest::parseHeaders(std::string req) const {
@@ -43,6 +53,11 @@ std::map<std::string, std::string> HttpRequest::parseHeaders(std::string req) co
     if (colon != std::string::npos) {
       std::string key = line.substr(0, colon);
       std::string value = line.substr(colon + 1);
+      size_t space = value.find_first_not_of(" \t\n\v\f\r");
+      if (space != std::string::npos) {
+        value = value.substr(space);
+      }
+      std::transform(key.begin(), key.end(), key.begin(), ::tolower);
       headers[key] = value;
     }
     req = req.substr(pos + 2);
@@ -82,6 +97,15 @@ std::string HttpRequest::parsePath(std::string req) const {
   return "";
 }
 
+// return 1.1, 2.0
+std::string HttpRequest::parseHttpVersion(std::string line) const {
+  size_t pos = line.find_last_of("/");
+  if (pos != std::string::npos) {
+    std::string version = line.substr(pos + 1);
+    return version;
+  }
+  return "";
+}
 
 HttpMethod::Code HttpRequest::getMethod() const {
   return _method;

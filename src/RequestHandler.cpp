@@ -48,7 +48,7 @@ HttpResponse RequestHandler::handleGet() {
   }
   // Fallback on 127.0.0.1:8080/ -> 127.0.0.1:8080/index.html
   if (_req.getPath().find(".") == std::string::npos) {
-    path += "/index.html";
+    path += "index.html";
   }
   std::ifstream file(path.c_str());
 
