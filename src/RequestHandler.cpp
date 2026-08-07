@@ -82,7 +82,7 @@ HttpResponse RequestHandler::handleDelete() {
   return HttpResponse("No Content", HttpStatus::NO_CONTENT, _socket, "text/html");
 }
 
-static const std::map<std::string, std::string> miniTable() {
+static const std::map<std::string, std::string>& miniTable() {
   static std::map<std::string, std::string> contentType;
 
   if (contentType.empty()) {

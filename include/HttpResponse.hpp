@@ -4,7 +4,6 @@
 #include <iostream>
 #include <sstream>
 #include <sys/socket.h>
-#include "enum/ContentType.hpp"
 #include "enum/HttpStatus.hpp"
 
 class HttpResponse {
