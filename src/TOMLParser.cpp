@@ -34,11 +34,11 @@ bool TOMLParser::isValidTable(const std::string& line)
 		ed == std::string::npos ||
 		line[ed + 1])
 	{
-		std::cout << "`" << line << "` is an invalid table." << std::endl;
+		std::cout << "X : `" << line << "` is an invalid table." << std::endl;
 		return (false);
 	}
 
-	std::cout << "`" << line << "` is a valid table." << std::endl;
+	std::cout << "V : `" << line << "` is a valid table." << std::endl;
 	return (true);
 }
 
@@ -54,7 +54,7 @@ bool TOMLParser::isValidPair(const std::string& line)
 
 	if (eqPos == std::string::npos)
 	{
-		std::cout << "`" << line << "` is an invalid pair." << std::endl;
+		std::cout << "X : `" << line << "` is an invalid pair (no equal sign)." << std::endl;
 		return (false);
 	}
 
@@ -66,40 +66,86 @@ bool TOMLParser::isValidPair(const std::string& line)
 	value.erase(0, value.find_first_not_of(" \t"));
 	value.erase(value.find_last_not_of(" \t") + 1);
 
-	if (key.empty() || value.empty() || value.size() < 2 || value[0] != '"' || value[value.size() - 1] != '"')
+	if (!(isValidKey(key) && isValidValue(value)))
 	{
-		std::cout << "`" << line << "` is an invalid pair." << std::endl;
+		std::cout << "X : `" << line << "` is an invalid pair." << std::endl;
 		return (false);
 	}
-	std::cout << "`" << line << "` is a valid pair." << std::endl;
+	std::cout << "V : `" << line << "` is a valid pair." << std::endl;
 	return (true);
 }
 
 // TODO
 bool TOMLParser::isValidKey(const std::string& key)
 {
-	(void)key;
+	// std::cout << "DEBUG | Received key as `" << key << "`." << std::endl;
+	if (key.empty())
+	{
+		// std::cout << "DEBUG | Key `" << key << "` is empty." << std::endl;
+		return (false);
+	}
+
+	int qcount = 0;
+	for (size_t i = 0; i < key.size(); i++)
+	{
+		if (key[i] == '"')
+			qcount += 1;
+	}
+	if (qcount > 2)
+	{
+		// std::cout << "DEBUG | Key `" << key << "` contains too many quotes." << std::endl;
+		return (false);
+	}
+
+
+	// size_t op = key.find_first_of('"');
+	// size_t ed = key.find('"', op);
+
 	return (true);
 }
 
-// TODO
 bool TOMLParser::isValidValue(const std::string& value)
 {
-	(void)value;
+	if (value.empty())
+		return (false);
+
+	int qcount = 0;
+	for (size_t i = 0; i < value.size(); i++)
+	{
+		if (value[i] == '"')
+			qcount += 1;
+	}
+	if (qcount != 2 && (!(isBool(value) || isInt(value) || isFloat(value))))
+		return (false);
+
 	return (true);
 }
+
+// bool TOMLParser::isString(const std::string& valueString)
+// {}
+
+// bool TOMLParser::isMultilineString(const std::string& valueString)
+// {}
+
+// bool TOMLParser::isLiteral(const std::string& valueString)
+// {}
+
+// bool TOMLParser::isMultilineLiteral(const std::string& valueString)
+// {}
 
 bool TOMLParser::isInt(const std::string& valueString)
 {
+	std::string trimmed = trim(valueString, "_");
 	int value;
-	std::istringstream iss(valueString);
+	std::istringstream iss(trimmed);
 	return (iss >> value) && iss.eof();
 }
 
 bool TOMLParser::isFloat(const std::string& valueString)
 {
+	std::string trimmed = trim(valueString, "_");
 	float value;
-	std::istringstream iss(valueString);
+	std::istringstream iss(trimmed);
 	return (iss >> value) && iss.eof();
 }
 

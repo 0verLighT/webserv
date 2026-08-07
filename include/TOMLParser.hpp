@@ -27,6 +27,10 @@ public:
 	bool isValidKey(const std::string& key);
 	bool isValidValue(const std::string& value);
 
+	bool isString(const std::string& valueString);
+	bool isMultilineString(const std::string& valueString);
+	bool isLiteral(const std::string& valueString);
+	bool isMultilineLiteral(const std::string& valueString);
 	bool isInt(const std::string& valueString);
 	bool isFloat(const std::string& valueString);
 	bool isBool(const std::string& valueString);
