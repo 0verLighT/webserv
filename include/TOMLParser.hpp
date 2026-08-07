@@ -21,22 +21,22 @@ public:
 
 	/*=============== CHECKERS ===============*/
 
-	bool isValidLine(std::string line);
-	bool isValidTable(std::string line);
-	bool isValidPair(std::string line);
-	bool isValidKey(std::string key);
-	bool isValidValue(std::string value);
+	bool isValidLine(const std::string& line);
+	bool isValidTable(const std::string& line);
+	bool isValidPair(const std::string& line);
+	bool isValidKey(const std::string& key);
+	bool isValidValue(const std::string& value);
 
-	bool isInt(std::string valueString);
-	bool isFloat(std::string valueString);
-	bool isBool(std::string valueString);
-	bool isBase(std::string valueString);
+	bool isInt(const std::string& valueString);
+	bool isFloat(const std::string& valueString);
+	bool isBool(const std::string& valueString);
+	bool isBase(const std::string& valueString);
 
 	/*=============== CONVERTERS ===============*/
 
-	int		toInt(std::string valueString);
-	float	toFloat(std::string valueString);
-	bool	toBool(std::string valueString);
+	int		toInt(const std::string& valueString);
+	float	toFloat(const std::string& valueString);
+	bool	toBool(const std::string& valueString);
 
 	/*=============== ERRORS ===============*/
 
