@@ -4,6 +4,8 @@
 #include <sstream>
 #include <limits>
 #include <stdexcept>
+#include <cctype>
+#include <iostream>
 
 template<typename T>
 static std::string to_string(const T& value) {
