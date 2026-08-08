@@ -8,11 +8,17 @@ TOMLParser::~TOMLParser() {}
 
 /*=============== GETTERS ===============*/
 
-// std::string TOMLParser::getKey()
-// {}
+//TODO
+std::string TOMLParser::getKey(const std::string& line)
+{
+	return (line);
+}
 
-// std::string TOMLParser::getValue()
-// {}
+// TODO
+std::string TOMLParser::getValue(const std::string& line)
+{
+	return (line);
+}
 
 /*=============== CHECKERS ===============*/
 
@@ -34,11 +40,11 @@ bool TOMLParser::isValidTable(const std::string& line)
 		ed == std::string::npos ||
 		line[ed + 1])
 	{
-		std::cout << "X : `" << line << "`" << std::endl;
+		// std::cout << "X : `" << line << "`" << std::endl;
 		return (false);
 	}
 
-	std::cout << "V : `" << line << "`" << std::endl;
+	// std::cout << "V : `" << line << "`" << std::endl;
 	return (true);
 }
 
@@ -54,7 +60,7 @@ bool TOMLParser::isValidPair(const std::string& line)
 
 	if (eqPos == std::string::npos)
 	{
-		std::cout << "X : `" << line << "` (no equal sign)." << std::endl;
+		// std::cout << "X : `" << line << "` (no equal sign)." << std::endl;
 		return (false);
 	}
 
@@ -68,14 +74,17 @@ bool TOMLParser::isValidPair(const std::string& line)
 
 	if (!(isValidKey(key) && isValidValue(value)))
 	{
-		std::cout << "X : `" << line << "`"  << std::endl;
+		// std::cout << "X : `" << line << "`"  << std::endl;
+		_tmp_key = "";
+		_tmp_value = "";
 		return (false);
 	}
-	std::cout << "V : `" << line << "`" << std::endl;
+	// std::cout << "V : `" << line << "`" << std::endl;
+	_tmp_key = key;
+	_tmp_value = value;
 	return (true);
 }
 
-// TODO
 bool TOMLParser::isValidKey(const std::string& key)
 {
 	// std::cout << "DEBUG | Received key as `" << key << "`." << std::endl;
@@ -96,10 +105,6 @@ bool TOMLParser::isValidKey(const std::string& key)
 		// std::cout << "DEBUG | Key `" << key << "` contains too many quotes." << std::endl;
 		return (false);
 	}
-
-
-	// size_t op = key.find_first_of('"');
-	// size_t ed = key.find('"', op);
 
 	return (true);
 }
@@ -228,4 +233,33 @@ bool TOMLParser::toBool(const std::string& valueString)
 
 const char *TOMLParser::InvalidFile::what(void) const throw() {
 	return ("Input TOML file is invalid.");
+}
+
+/*=============== MEMBERS ===============*/
+
+// TODO: already assigned key protection
+void TOMLParser::processInputFile(const std::string filepath)
+{
+	std::ifstream file(filepath.c_str());
+	if (!file)
+	{
+		throw std::runtime_error("Couldn't open input file.");
+	}
+	std::string line;
+	while (std::getline(file, line))
+	{
+		if (startsWith(line, "#") || line.empty())
+			continue;
+		if (isValidLine(line))
+			_data[_tmp_key] = _tmp_value;
+	}
+	file.close();
+}
+
+void TOMLParser::printData(void)
+{
+	for (std::map<std::string, std::string>::iterator it = _data.begin(); it != _data.end(); ++it)
+	{
+		std::cout << it->first << " = " << it->second << std::endl;
+	}
 }
