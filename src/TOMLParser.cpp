@@ -39,12 +39,7 @@ bool TOMLParser::isValidTable(const std::string& line)
 	if (op == std::string::npos ||
 		ed == std::string::npos ||
 		line[ed + 1])
-	{
-		// std::cout << "X : `" << line << "`" << std::endl;
-		return (false);
-	}
-
-	// std::cout << "V : `" << line << "`" << std::endl;
+		throw InvalidFile();
 	return (true);
 }
 
@@ -59,10 +54,7 @@ bool TOMLParser::isValidPair(const std::string& line)
 	size_t eqPos = trimmed.find('=');
 
 	if (eqPos == std::string::npos)
-	{
-		// std::cout << "X : `" << line << "` (no equal sign)." << std::endl;
-		return (false);
-	}
+		throw InvalidFile();
 
 	key = trimmed.substr(0, eqPos);
 	value = trimmed.substr(eqPos + 1);
@@ -73,13 +65,8 @@ bool TOMLParser::isValidPair(const std::string& line)
 	value.erase(value.find_last_not_of(" \t") + 1);
 
 	if (!(isValidKey(key) && isValidValue(value)))
-	{
-		// std::cout << "X : `" << line << "`"  << std::endl;
-		_tmp_key = "";
-		_tmp_value = "";
-		return (false);
-	}
-	// std::cout << "V : `" << line << "`" << std::endl;
+		throw InvalidFile();
+
 	_tmp_key = key;
 	_tmp_value = value;
 	return (true);
@@ -87,12 +74,11 @@ bool TOMLParser::isValidPair(const std::string& line)
 
 bool TOMLParser::isValidKey(const std::string& key)
 {
-	// std::cout << "DEBUG | Received key as `" << key << "`." << std::endl;
+	if (isDuplicate(key))
+		throw DuplicateKey();
+
 	if (key.empty())
-	{
-		// std::cout << "DEBUG | Key `" << key << "` is empty." << std::endl;
-		return (false);
-	}
+		throw InvalidKey();
 
 	int qcount = 0;
 	for (size_t i = 0; i < key.size(); i++)
@@ -100,11 +86,8 @@ bool TOMLParser::isValidKey(const std::string& key)
 		if (key[i] == '"')
 			qcount += 1;
 	}
-	if (qcount > 2)
-	{
-		// std::cout << "DEBUG | Key `" << key << "` contains too many quotes." << std::endl;
-		return (false);
-	}
+	if (qcount > 2 || qcount == 1)
+		throw InvalidKey();
 
 	return (true);
 }
@@ -112,7 +95,7 @@ bool TOMLParser::isValidKey(const std::string& key)
 bool TOMLParser::isValidValue(const std::string& value)
 {
 	if (value.empty())
-		return (false);
+		throw InvalidValue();
 
 	int qcount = 0;
 	for (size_t i = 0; i < value.size(); i++)
@@ -121,7 +104,7 @@ bool TOMLParser::isValidValue(const std::string& value)
 			qcount += 1;
 	}
 	if (qcount != 2 && (!(isBool(value) || isInt(value) || isFloat(value))))
-		return (false);
+		throw InvalidValue();
 
 	return (true);
 }
@@ -167,6 +150,12 @@ bool TOMLParser::isInt(const std::string& valueString)
 
 bool TOMLParser::isFloat(const std::string& valueString)
 {
+	if (startsWith(valueString, ".") || endsWith(valueString, "."))
+		return (false);
+
+	if (valueString.find(".e") != std::string::npos)
+		return (false);
+
 	if (valueString == "inf" ||
 		valueString == "+inf" ||
 		valueString == "-inf" ||
@@ -191,6 +180,11 @@ bool TOMLParser::isBase(const std::string& valueString)
 	return (startsWith(valueString, "0b") ||
 			startsWith(valueString, "0o") ||
 			startsWith(valueString, "0x"));
+}
+
+bool TOMLParser::isDuplicate(const std::string& key)
+{
+	return (_data.find(key) != _data.end());
 }
 
 /*=============== CONVERTERS ===============*/
@@ -229,15 +223,8 @@ bool TOMLParser::toBool(const std::string& valueString)
 		return (false);
 }
 
-/*=============== ERRORS ===============*/
-
-const char *TOMLParser::InvalidFile::what(void) const throw() {
-	return ("Input TOML file is invalid.");
-}
-
 /*=============== MEMBERS ===============*/
 
-// TODO: already assigned key protection
 void TOMLParser::processInputFile(const std::string filepath)
 {
 	std::ifstream file(filepath.c_str());
@@ -262,4 +249,22 @@ void TOMLParser::printData(void)
 	{
 		std::cout << it->first << " = " << it->second << std::endl;
 	}
+}
+
+/*=============== ERRORS ===============*/
+
+const char *TOMLParser::InvalidFile::what(void) const throw() {
+	return ("Input TOML file is invalid.");
+}
+
+const char *TOMLParser::DuplicateKey::what(void) const throw() {
+	return ("Duplicate key in input file.");
+}
+
+const char *TOMLParser::InvalidKey::what(void) const throw() {
+	return ("Invalid key format.");
+}
+
+const char *TOMLParser::InvalidValue::what(void) const throw() {
+	return ("Invalid value format.");
 }

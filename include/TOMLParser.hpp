@@ -40,11 +40,18 @@ public:
 	bool isBool(const std::string& valueString);
 	bool isBase(const std::string& valueString);
 
+	bool isDuplicate(const std::string& key);
+
 	/*=============== CONVERTERS ===============*/
 
 	int		toInt(const std::string& valueString);
 	float	toFloat(const std::string& valueString);
 	bool	toBool(const std::string& valueString);
+
+	/*=============== MEMBERS ===============*/
+
+	void processInputFile(const std::string filepath);
+	void printData(void);
 
 	/*=============== ERRORS ===============*/
 
@@ -52,8 +59,15 @@ public:
 		virtual const char *what(void) const throw();
 	};
 
-	/*=============== MEMBERS ===============*/
+	class DuplicateKey: public TOMLParserException {
+		virtual const char *what(void) const throw();
+	};
 
-	void processInputFile(const std::string filepath);
-	void printData(void);
+	class InvalidKey: public TOMLParserException {
+		virtual const char *what(void) const throw();
+	};
+
+	class InvalidValue: public TOMLParserException {
+		virtual const char *what(void) const throw();
+	};
 };
