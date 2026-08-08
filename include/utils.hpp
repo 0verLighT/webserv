@@ -2,10 +2,11 @@
 
 #include <string>
 #include <sstream>
-#include <limits>
 #include <stdexcept>
 #include <cctype>
 #include <iostream>
+#include <limits>
+#include <cmath>
 
 template<typename T>
 static std::string to_string(const T& value) {

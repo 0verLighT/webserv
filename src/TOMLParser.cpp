@@ -34,11 +34,11 @@ bool TOMLParser::isValidTable(const std::string& line)
 		ed == std::string::npos ||
 		line[ed + 1])
 	{
-		std::cout << "X : `" << line << "` is an invalid table." << std::endl;
+		std::cout << "X : `" << line << "`" << std::endl;
 		return (false);
 	}
 
-	std::cout << "V : `" << line << "` is a valid table." << std::endl;
+	std::cout << "V : `" << line << "`" << std::endl;
 	return (true);
 }
 
@@ -54,7 +54,7 @@ bool TOMLParser::isValidPair(const std::string& line)
 
 	if (eqPos == std::string::npos)
 	{
-		std::cout << "X : `" << line << "` is an invalid pair (no equal sign)." << std::endl;
+		std::cout << "X : `" << line << "` (no equal sign)." << std::endl;
 		return (false);
 	}
 
@@ -68,10 +68,10 @@ bool TOMLParser::isValidPair(const std::string& line)
 
 	if (!(isValidKey(key) && isValidValue(value)))
 	{
-		std::cout << "X : `" << line << "` is an invalid pair." << std::endl;
+		std::cout << "X : `" << line << "`"  << std::endl;
 		return (false);
 	}
-	std::cout << "V : `" << line << "` is a valid pair." << std::endl;
+	std::cout << "V : `" << line << "`" << std::endl;
 	return (true);
 }
 
@@ -137,12 +137,39 @@ bool TOMLParser::isInt(const std::string& valueString)
 {
 	std::string trimmed = trim(valueString, "_");
 	int value;
+
+	if (isBase(trimmed))
+	{
+		try
+		{
+			if (startsWith(trimmed, "0b"))
+				value = anyBaseToInt(&trimmed[2], 2);
+			if (startsWith(trimmed, "0o"))
+				value = anyBaseToInt(&trimmed[2], 8);
+			if (startsWith(trimmed, "0x"))
+				value = anyBaseToInt(&trimmed[2], 16);
+			return (true);
+		}
+		catch(const std::exception& e)
+		{
+			return (false);
+		}
+	}
+
 	std::istringstream iss(trimmed);
 	return (iss >> value) && iss.eof();
 }
 
 bool TOMLParser::isFloat(const std::string& valueString)
 {
+	if (valueString == "inf" ||
+		valueString == "+inf" ||
+		valueString == "-inf" ||
+		valueString == "nan" ||
+		valueString == "+nan" ||
+		valueString == "-nan")
+		return (true);
+
 	std::string trimmed = trim(valueString, "_");
 	float value;
 	std::istringstream iss(trimmed);
@@ -173,6 +200,16 @@ int TOMLParser::toInt(const std::string& valueString)
 
 float TOMLParser::toFloat(const std::string& valueString)
 {
+	if (valueString == "inf" ||
+		valueString == "+inf")
+		return (std::numeric_limits<float>::infinity());
+	if (valueString == "-inf")
+		return (-std::numeric_limits<float>::infinity());
+	if (valueString == "nan" ||
+		valueString == "+nan" ||
+		valueString == "-nan")
+		return (nanf(valueString.c_str()));
+
 	float value;
 	std::istringstream iss(valueString);
 	iss >> value;

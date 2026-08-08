@@ -1,7 +1,5 @@
 #include "utils.hpp"
 #include "Logger.hpp"
-#include <cstddef>
-#include <string>
 
 const std::string getExtenstionFormPath(const std::string &path) {
   size_t dotPos = path.find_last_of('.');
