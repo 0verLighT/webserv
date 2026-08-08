@@ -1,5 +1,6 @@
 #pragma once
 
+#include "TOMLParserExecption.hpp"
 #include <iostream>
 #include <sstream>
 #include <map>
@@ -44,7 +45,6 @@ public:
 
 	/*=============== ERRORS ===============*/
 
-	class TOMLParserException: public std::exception {};
 	class InvalidFile: public TOMLParserException {
 		virtual const char *what(void) const throw();
 	};
