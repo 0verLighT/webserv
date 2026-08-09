@@ -51,22 +51,9 @@ public:
 	bool isValidKey(const std::string& key);
 	bool isValidValue(const std::string& value);
 
-	bool isString(const std::string& valueString);
-	bool isMultilineString(const std::string& valueString);
-	bool isLiteral(const std::string& valueString);
-	bool isMultilineLiteral(const std::string& valueString);
-	bool isInt(const std::string& valueString);
-	bool isFloat(const std::string& valueString);
-	bool isBool(const std::string& valueString);
-	bool isBase(const std::string& valueString);
-
 	bool isDuplicate(const std::string& key);
 
 	/*=============== CONVERTERS ===============*/
-
-	int		toInt(const std::string& valueString);
-	float	toFloat(const std::string& valueString);
-	bool	toBool(const std::string& valueString);
 
 	template <typename T>
 	T convertValue(const std::string& value) {

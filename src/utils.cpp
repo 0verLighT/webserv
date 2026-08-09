@@ -14,7 +14,104 @@ const std::string getExtenstionFormPath(const std::string &path) {
   return "";
 }
 
-bool startsWith(const std::string& s, const std::string& prefix)
+bool	isInt(const std::string& valueString)
+{
+	std::string trimmed = trim(valueString, "_");
+	int value;
+
+	if (isBase(trimmed))
+	{
+		try
+		{
+			if (startsWith(trimmed, "0b"))
+				value = anyBaseToInt(&trimmed[2], 2);
+			if (startsWith(trimmed, "0o"))
+				value = anyBaseToInt(&trimmed[2], 8);
+			if (startsWith(trimmed, "0x"))
+				value = anyBaseToInt(&trimmed[2], 16);
+			return (true);
+		}
+		catch(const std::exception& e)
+		{
+			return (false);
+		}
+	}
+
+	std::istringstream iss(trimmed);
+	return (iss >> value) && iss.eof();
+}
+
+bool	isFloat(const std::string& valueString)
+{
+	if (startsWith(valueString, ".") || endsWith(valueString, "."))
+		return (false);
+
+	if (valueString.find(".e") != std::string::npos)
+		return (false);
+
+	if (valueString == "inf" ||
+		valueString == "+inf" ||
+		valueString == "-inf" ||
+		valueString == "nan" ||
+		valueString == "+nan" ||
+		valueString == "-nan")
+		return (true);
+
+	std::string trimmed = trim(valueString, "_");
+	float value;
+	std::istringstream iss(trimmed);
+	return (iss >> value) && iss.eof();
+}
+
+bool	isBool(const std::string& valueString)
+{
+	return (valueString == "true" || valueString == "false");
+}
+
+bool	isBase(const std::string& valueString)
+{
+	return (startsWith(valueString, "0b") ||
+			startsWith(valueString, "0o") ||
+			startsWith(valueString, "0x"));
+}
+
+/*=============== CONVERTERS ===============*/
+
+int		toInt(const std::string& valueString)
+{
+	int value;
+	std::istringstream iss(valueString);
+	iss >> value;
+	return (value);
+}
+
+float	toFloat(const std::string& valueString)
+{
+	if (valueString == "inf" ||
+		valueString == "+inf")
+		return (std::numeric_limits<float>::infinity());
+	if (valueString == "-inf")
+		return (-std::numeric_limits<float>::infinity());
+	if (valueString == "nan" ||
+		valueString == "+nan" ||
+		valueString == "-nan")
+		return (nanf(valueString.c_str()));
+
+	float value;
+	std::istringstream iss(valueString);
+	iss >> value;
+	return (value);
+}
+
+bool	toBool(const std::string& valueString)
+{
+	if (valueString == "true")
+		return (true);
+	else
+		return (false);
+}
+
+bool	startsWith(const std::string& s, const std::string& prefix)
 {
 	size_t pos = s.find(prefix);
 	if (pos == 0)
@@ -22,7 +119,7 @@ bool startsWith(const std::string& s, const std::string& prefix)
 	return (false);
 }
 
-bool endsWith(const std::string& s, const std::string& suffix)
+bool	endsWith(const std::string& s, const std::string& suffix)
 {
 	size_t pos = s.rfind(suffix);
 	if (pos == s.size() - suffix.size())
@@ -30,7 +127,7 @@ bool endsWith(const std::string& s, const std::string& suffix)
 	return (false);
 }
 
-std::string trim(const std::string& s, const std::string& rm)
+std::string	trim(const std::string& s, const std::string& rm)
 {
 	std::string trimmed = s;
 	size_t pos = 0;
@@ -42,7 +139,7 @@ std::string trim(const std::string& s, const std::string& rm)
 
 /*=============== NUMBER UTILS ===============*/
 
-int anyBaseToInt(const std::string& number, int base)
+int	anyBaseToInt(const std::string& number, int base)
 {
 	int res = 0;
 	std::size_t i = 0;

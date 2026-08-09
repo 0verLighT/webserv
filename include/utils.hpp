@@ -8,6 +8,15 @@
 #include <limits>
 #include <cmath>
 
+bool	isInt(const std::string& valueString);
+bool	isFloat(const std::string& valueString);
+bool	isBool(const std::string& valueString);
+bool	isBase(const std::string& valueString);
+
+int		toInt(const std::string& valueString);
+float	toFloat(const std::string& valueString);
+bool	toBool(const std::string& valueString);
+
 template<typename T>
 static std::string to_string(const T& value) {
   std::ostringstream oss;

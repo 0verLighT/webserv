@@ -1,5 +1,5 @@
 project(
-  'webserv', 
+  'webserv',
   'cpp',
   license: 'MIT',
   version: '0.0.1',
@@ -7,14 +7,9 @@ project(
 )
 
 sources = files(
-  'src/Client.cpp',
-  'src/HttpRequest.cpp',
-  'src/HttpResponse.cpp',
-  'src/Logger.cpp',
-  'src/RequestHandler.cpp',
-  'src/Server.cpp',
   'src/main.cpp',
-  'src/utils.cpp'
+  'src/utils.cpp',
+  'src/classes/TOMLParser.cpp'
 )
 
 inc = include_directories('include')

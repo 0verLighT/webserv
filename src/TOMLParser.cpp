@@ -8,18 +8,6 @@ TOMLParser::~TOMLParser() {}
 
 /*=============== GETTERS ===============*/
 
-//TODO
-std::string TOMLParser::getKey(const std::string& line)
-{
-	return (line);
-}
-
-// TODO
-std::string TOMLParser::getValue(const std::string& line)
-{
-	return (line);
-}
-
 TOMLParser::ValueType TOMLParser::getType(const std::string& var)
 {
 	if (isInt(var))
@@ -121,118 +109,9 @@ bool TOMLParser::isValidValue(const std::string& value)
 	return (true);
 }
 
-// bool TOMLParser::isString(const std::string& valueString)
-// {}
-
-// bool TOMLParser::isMultilineString(const std::string& valueString)
-// {}
-
-// bool TOMLParser::isLiteral(const std::string& valueString)
-// {}
-
-// bool TOMLParser::isMultilineLiteral(const std::string& valueString)
-// {}
-
-bool TOMLParser::isInt(const std::string& valueString)
-{
-	std::string trimmed = trim(valueString, "_");
-	int value;
-
-	if (isBase(trimmed))
-	{
-		try
-		{
-			if (startsWith(trimmed, "0b"))
-				value = anyBaseToInt(&trimmed[2], 2);
-			if (startsWith(trimmed, "0o"))
-				value = anyBaseToInt(&trimmed[2], 8);
-			if (startsWith(trimmed, "0x"))
-				value = anyBaseToInt(&trimmed[2], 16);
-			return (true);
-		}
-		catch(const std::exception& e)
-		{
-			return (false);
-		}
-	}
-
-	std::istringstream iss(trimmed);
-	return (iss >> value) && iss.eof();
-}
-
-bool TOMLParser::isFloat(const std::string& valueString)
-{
-	if (startsWith(valueString, ".") || endsWith(valueString, "."))
-		return (false);
-
-	if (valueString.find(".e") != std::string::npos)
-		return (false);
-
-	if (valueString == "inf" ||
-		valueString == "+inf" ||
-		valueString == "-inf" ||
-		valueString == "nan" ||
-		valueString == "+nan" ||
-		valueString == "-nan")
-		return (true);
-
-	std::string trimmed = trim(valueString, "_");
-	float value;
-	std::istringstream iss(trimmed);
-	return (iss >> value) && iss.eof();
-}
-
-bool TOMLParser::isBool(const std::string& valueString)
-{
-	return (valueString == "true" || valueString == "false");
-}
-
-bool TOMLParser::isBase(const std::string& valueString)
-{
-	return (startsWith(valueString, "0b") ||
-			startsWith(valueString, "0o") ||
-			startsWith(valueString, "0x"));
-}
-
 bool TOMLParser::isDuplicate(const std::string& key)
 {
 	return (_data.find(key) != _data.end());
-}
-
-/*=============== CONVERTERS ===============*/
-
-int TOMLParser::toInt(const std::string& valueString)
-{
-	int value;
-	std::istringstream iss(valueString);
-	iss >> value;
-	return (value);
-}
-
-float TOMLParser::toFloat(const std::string& valueString)
-{
-	if (valueString == "inf" ||
-		valueString == "+inf")
-		return (std::numeric_limits<float>::infinity());
-	if (valueString == "-inf")
-		return (-std::numeric_limits<float>::infinity());
-	if (valueString == "nan" ||
-		valueString == "+nan" ||
-		valueString == "-nan")
-		return (nanf(valueString.c_str()));
-
-	float value;
-	std::istringstream iss(valueString);
-	iss >> value;
-	return (value);
-}
-
-bool TOMLParser::toBool(const std::string& valueString)
-{
-	if (valueString == "true")
-		return (true);
-	else
-		return (false);
 }
 
 /*=============== MEMBERS ===============*/
