@@ -1,6 +1,7 @@
 #pragma once
 
 #include "TOMLParserExecption.hpp"
+#include "utils.hpp"
 #include <iostream>
 #include <sstream>
 #include <fstream>
