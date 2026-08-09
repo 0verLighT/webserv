@@ -1,5 +1,5 @@
-#include "HttpRequest.hpp"
-#include "HttpResponse.hpp"
+#include "http/HttpRequest.hpp"
+#include "http/HttpResponse.hpp"
 #include "enum/HttpMethod.hpp"
 #include "RequestHandler.hpp"
 #include "Logger.hpp"

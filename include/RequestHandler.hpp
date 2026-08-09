@@ -1,7 +1,8 @@
 #pragma once
 
-#include "HttpResponse.hpp"
-#include "HttpRequest.hpp"
+#include "http/HttpException.hpp"
+#include "http/HttpResponse.hpp"
+#include "http/HttpRequest.hpp"
 #include "enum/HttpMethod.hpp"
 
 class RequestHandler {

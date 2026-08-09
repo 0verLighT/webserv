@@ -1,8 +1,8 @@
 #include "Server.hpp"
 #include "utils.hpp"
 #include "Client.hpp"
-#include "HttpRequest.hpp"
-#include "HttpResponse.hpp"
+#include "http/HttpRequest.hpp"
+#include "http/HttpResponse.hpp"
 #include "RequestHandler.hpp"
 #include "Logger.hpp"
 #include <cerrno>
