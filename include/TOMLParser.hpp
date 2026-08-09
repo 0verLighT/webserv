@@ -16,12 +16,32 @@ private:
 	std::map<std::string, std::string>	_data;
 
 public:
+	enum ValueType {
+		STRING,
+		INT,
+		FLOAT,
+		BOOL,
+	};
+
 	TOMLParser();
 	~TOMLParser();
-	/*=============== GETTERS ===============*/
 
-	std::string getKey(const std::string& line);
-	std::string getValue(const std::string& line);
+	std::string	getKey(const std::string& line);
+	std::string	getValue(const std::string& line);
+	ValueType	getType(const std::string& var);
+
+	template <typename T>
+	T getValueFromKey(const std::string& key) {
+		std::map<std::string, std::string>::iterator it = _data.find(key);
+		if (it == _data.end())
+			throw std::runtime_error("Value not found.");
+		try {
+			return convertValue<T>(it->second);
+		}
+		catch (const std::exception& e) {
+			throw;
+		}
+	}
 
 	/*=============== CHECKERS ===============*/
 
@@ -47,6 +67,28 @@ public:
 	int		toInt(const std::string& valueString);
 	float	toFloat(const std::string& valueString);
 	bool	toBool(const std::string& valueString);
+
+	template <typename T>
+	T convertValue(const std::string& value) {
+		switch (getType(value))
+		{
+		case INT:
+			return (toInt(value));
+			break;
+		case FLOAT:
+			return (toFloat(value));
+			break;
+		case BOOL:
+			return (toBool(value));
+			break;
+		case STRING:
+			return (value);
+			break;
+		default:
+			throw std::runtime_error("Impossible value conversion.");
+			break;
+		}
+	}
 
 	/*=============== MEMBERS ===============*/
 

@@ -20,6 +20,18 @@ std::string TOMLParser::getValue(const std::string& line)
 	return (line);
 }
 
+TOMLParser::ValueType TOMLParser::getType(const std::string& var)
+{
+	if (isInt(var))
+		return (INT);
+	else if (isFloat(var))
+		return (FLOAT);
+	else if (isBool(var))
+		return (BOOL);
+	else
+		return (STRING);
+}
+
 /*=============== CHECKERS ===============*/
 
 bool TOMLParser::isValidLine(const std::string& line)
