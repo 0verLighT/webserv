@@ -138,3 +138,5 @@ const char *TomlParser::InvalidKey::what(void) const throw() {
 const char *TomlParser::InvalidValue::what(void) const throw() {
   return ("Invalid value format.");
 }
+
+

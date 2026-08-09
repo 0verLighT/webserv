@@ -14,3 +14,5 @@ class Cgi {
     void	processInput(std::string input);
     void	createSubprocess(const std::string& filename, const std::string& args);
 };
+
+

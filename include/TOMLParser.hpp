@@ -80,3 +80,5 @@ class TomlParser {
       virtual const char *what(void) const throw();
     };
 };
+
+
