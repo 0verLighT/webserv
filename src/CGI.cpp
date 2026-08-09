@@ -1,4 +1,4 @@
-#include "CGI.hpp"
+#include "Cgi.hpp"
 
 Cgi::Cgi() {}
 
