@@ -2,4 +2,4 @@
 
 #include <exception>
 
-class TOMLParserException: public std::exception {};
+class TomlParserException: public std::exception {};

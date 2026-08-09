@@ -15,14 +15,14 @@ OBJS = $(addprefix $(BUILD_DIR), $(SOURCES:.cpp=.o))
 all: $(NAME)
 
 $(NAME): $(OBJS)
-	@$(CXX) $(OBJS) -o $(NAME)
+	$(CXX) $(OBJS) -o $(NAME)
 
 $(BUILD_DIR)%.o : %.cpp
-	@mkdir -p $(dir $@)
-	@$(CXX) $(CXXFLAGS) -c $< -o $@
+	mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	@rm -rf $(BUILD_DIR)
+	rm -rf $(BUILD_DIR)
 
 
 valgrind: $(NAME)
@@ -33,9 +33,9 @@ else
 endif
 
 fclean: clean
-	@$(RM) $(NAME)
+	$(RM) $(NAME)
 
 re: fclean
-	@$(MAKE) all
+	$(MAKE) all
 
 .PHONY: all re fclean clean valgrind
