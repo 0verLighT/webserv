@@ -6,5 +6,6 @@ SOURCES = \
 	src/http/HttpRequest.cpp \
 	src/http/HttpResponse.cpp \
 	src/http/HttpException.cpp \
+	src/http/httpUtils.cpp \
 	src/RequestHandler.cpp \
 	src/utils.cpp

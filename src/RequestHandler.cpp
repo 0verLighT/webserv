@@ -53,6 +53,7 @@ HttpResponse RequestHandler::handleGet() {
   std::ifstream file(path.c_str());
 
   if (!file.is_open()) {
+    // throw notFound();
     std::string path = "./html/" +  to_string(HttpStatus::NOT_FOUND) + ".html";
     std::ifstream file(path.c_str());
     std::stringstream body;
@@ -183,11 +184,9 @@ const std::string& RequestHandler::getContentTypeOfPath(std::string path) const 
 
   std::map<std::string, std::string>::const_iterator it = contentType.find(ext);
   if (it != contentType.end())
-    return (it->second);
-  
+    return it->second;
   return defaultType;
 }
-
 
 
 

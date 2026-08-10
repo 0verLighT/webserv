@@ -1,18 +1,7 @@
 #include "Server.hpp"
-#include "utils.hpp"
-#include "Client.hpp"
-#include "http/HttpRequest.hpp"
-#include "http/HttpResponse.hpp"
-#include "RequestHandler.hpp"
 #include "Logger.hpp"
-#include <cerrno>
-#include <csignal>
-#include <cstddef>
-#include <iostream>
-#include <sys/select.h>
-#include <unistd.h>
-#include <string.h>
-#include "enum/HttpStatus.hpp"
+#include "http/HttpException.hpp"
+#include <exception>
 
 volatile sig_atomic_t eventLoop = 1;
 
@@ -80,7 +69,11 @@ void Server::run() {
 
       req.parseRequest(client.getReqBuffer());
       RequestHandler handler(req, client.getSocket());
-      handler.handleMethod();
+      try {
+        handler.handleMethod();
+      } catch (const HttpException& e) {
+        Logger::info("HttpException trigger");
+      }
       Logger::info("Cycle Event Loop");
     }
   }

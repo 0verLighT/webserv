@@ -11,6 +11,7 @@ sources = files(
   'src/http/HttpRequest.cpp',
   'src/http/HttpResponse.cpp',
   'src/http/HttpException.cpp',
+  'src/http/httpUtils.cpp',
   'src/Logger.cpp',
   'src/RequestHandler.cpp',
   'src/Server.cpp',
