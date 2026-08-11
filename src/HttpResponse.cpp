@@ -14,7 +14,7 @@ std::string HttpResponse::serialize() {
     res << "Content-Length: " << _body.length() << "\r\n";
     res << "Content-Type: " << _contentType << "\r\n";
     res << "\r\n";
-    // res << _body; // BUG: can't display pictures as strings
+    res << _body; // BUG: can't display pictures as strings, terminal fills with nonsense
     return res.str();
 }
 

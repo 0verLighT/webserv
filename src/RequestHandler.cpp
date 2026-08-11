@@ -5,6 +5,7 @@
 #include "Logger.hpp"
 #include "enum/HttpStatus.hpp"
 #include "utils.hpp"
+#include <unistd.h>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -16,11 +17,11 @@ void RequestHandler::handleMethod() {
   Logger::debug("Id method : " + to_string(static_cast<int>(this->_req.getMethod())));
   HttpResponse res("", HttpStatus::METHOD_NOT_ALLOWED, this->_socket, "text/plain");
   switch (static_cast<int>(this->_req.getMethod())) {
-    case HttpMethod::GET : 
+    case HttpMethod::GET :
       Logger::debug("GET : " + to_string(this->_req.getMethod()));
       res = handleGet();
       break;
-    case HttpMethod::POST: 
+    case HttpMethod::POST:
       Logger::debug("POST : " + to_string(this->_req.getMethod()));
       res = handlePost();
       break;
@@ -32,7 +33,7 @@ void RequestHandler::handleMethod() {
       Logger::debug("DELETE : " + to_string(this->_req.getMethod()));
       res = handleDelete();
       break;
-      // In this case Thows 405 Method Not Allowed to the Client 
+      // In this case Thows 405 Method Not Allowed to the Client
     default:
       Logger::debug("DEFAULT : " + to_string(this->_req.getMethod()));
       break;
@@ -51,7 +52,6 @@ HttpResponse RequestHandler::handleGet() {
     std::stringstream body;
     body << file.rdbuf();
     return HttpResponse(body.str(), HttpStatus::NOT_FOUND, _socket, "text/html");
-    
   }
 
   std::stringstream body;
@@ -61,7 +61,6 @@ HttpResponse RequestHandler::handleGet() {
 
 HttpResponse RequestHandler::handlePost() {
   Logger::debug("Handling POST " + _req.getPath());
-  
   return HttpResponse("", HttpStatus::CREATED, _socket, "text/plain");
 }
 
@@ -72,6 +71,26 @@ HttpResponse RequestHandler::handlePut() {
 
 HttpResponse RequestHandler::handleDelete() {
   Logger::debug("Handling DELETE " + _req.getPath());
+  std::string path = "./html" + _req.getPath();
+
+  if (access(path.c_str(), F_OK) == 0) {
+    Logger::debug("Attempt to delete `" + _req.getPath() + "`");
+
+    if (access(path.c_str(), W_OK) != 0) {
+      Logger::error("Deletion of file `" + _req.getPath() + "` is forbidden");
+      return (HttpResponse("Forbidden access", HttpStatus::FORBIDDEN, _socket, "TODO: REPLACE THIS"));
+    }
+
+    int status = std::remove(path.c_str());
+    if (status != 0) {
+      return HttpResponse("Internal Server Error", HttpStatus::INTERNAL_SERVER_ERROR, _socket, "TODO: REPLACE THIS");
+    }
+  }
+  else {
+    Logger::error("File `" + _req.getPath() + "` not found");
+    return HttpResponse("Not Found", HttpStatus::NOT_FOUND, _socket, "TODO: REPLACE THIS");
+  }
+
   return HttpResponse("No Content", HttpStatus::NO_CONTENT, _socket, "text/html");
 }
 
@@ -169,7 +188,7 @@ std::string RequestHandler::getContentTypeOfPath(std::string path) const {
   std::map<std::string, std::string>::const_iterator it = contentType.find(ext);
   if (it != contentType.end())
     return (it->second);
-  
+
   return "application/octet-stream";
 }
 
