@@ -10,6 +10,14 @@ class RequestHandler {
     RequestHandler(HttpRequest req, int socket);
     void handleMethod();
     ~RequestHandler();
+    class Forbidden : HttpException {
+      public:
+        Forbidden(): {}
+    };
+    class NotFound : HttpException {
+      public:
+        NotFound();
+    };
   private:
     HttpRequest _req;
     int _socket;
