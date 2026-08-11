@@ -5,6 +5,7 @@
 #include "HttpResponse.hpp"
 #include "RequestHandler.hpp"
 #include "Logger.hpp"
+#include <arpa/inet.h>
 #include <cerrno>
 #include <csignal>
 #include <cstddef>
@@ -19,7 +20,7 @@ int eventLoop = 1;
 void handlerSignal(int sig) {
   (void)sig;
   eventLoop = 0;
-  Logger::info("Signal " + to_string(sig) + " received");
+  Logger::warn("Signal " + to_string(sig) + " received");
 }
 
 Server::Server(int port): _port(port) {
@@ -70,11 +71,22 @@ void Server::run() {
     if (activity == 0)
       continue;
     if (FD_ISSET(_socket, &set)) {
-      int clientSocket = accept(_socket, NULL, NULL);
+      sockaddr_in clientAddress;
+      socklen_t clientLen = sizeof(clientAddress);
+      int clientSocket = accept(_socket, reinterpret_cast<sockaddr*>(&clientAddress), &clientLen);
       if (clientSocket == -1) {
         std::cerr << "accept: " << strerror(errno) << std::endl;
         continue;
       };
+
+      char ipBuffer[INET_ADDRSTRLEN];
+      std::string clientIp = "unknown";
+      if (inet_ntop(AF_INET, &clientAddress.sin_addr, ipBuffer, sizeof(ipBuffer)) != NULL) {
+        clientIp = ipBuffer;
+      }
+      Logger::info("Client IP: " + clientIp);
+      Logger::info("Port: " + to_string(ntohs(clientAddress.sin_port)));
+
       Client client(clientSocket);
       HttpRequest req;
 
