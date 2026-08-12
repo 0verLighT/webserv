@@ -35,6 +35,7 @@ void RequestHandler::handleMethod() {
       // In this case Thows 405 Method Not Allowed to the Client 
     default:
       Logger::debug("DEFAULT : " + to_string(this->_req.getMethod()));
+      throw MethodNotAllowed(_socket);
       break;
   }
   res.sendHttpResponse();
@@ -44,7 +45,7 @@ HttpResponse RequestHandler::handleGet() {
   Logger::debug("Handling GET " + _req.getPath());
   std::string path = "./html" + _req.getPath();
   if (_req.getPath().find("..") != std::string::npos) {
-    return HttpResponse("", HttpStatus::FORBIDDEN, _socket, "text/html");
+    throw Forbidden(_socket);
   }
   // Fallback on 127.0.0.1:8080/ -> 127.0.0.1:8080/index.html
   if (_req.getPath().find(".") == std::string::npos) {
@@ -53,15 +54,10 @@ HttpResponse RequestHandler::handleGet() {
   std::ifstream file(path.c_str());
 
   if (!file.is_open()) {
-    // throw notFound();
-    std::string path = "./html/" +  to_string(HttpStatus::NOT_FOUND) + ".html";
-    std::ifstream file(path.c_str());
-    std::stringstream body;
-    body << file.rdbuf();
-    return HttpResponse(body.str(), HttpStatus::NOT_FOUND, _socket, "text/html");
-    
+    Logger::debug("File not found: " + path);
+    throw NotFound(_socket);
   }
-
+  
   std::stringstream body;
   body << file.rdbuf();
   return HttpResponse(body.str(), HttpStatus::OK, _socket, getContentTypeOfPath(path));

@@ -72,7 +72,9 @@ void Server::run() {
       try {
         handler.handleMethod();
       } catch (const HttpException& e) {
-        Logger::info("HttpException trigger");
+        Logger::info("HttpException trigger : " + std::string(e.what()));
+        e.SendExecptionResponse();
+        continue;
       }
       Logger::info("Cycle Event Loop");
     }

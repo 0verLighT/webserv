@@ -19,7 +19,7 @@ std::string HttpResponse::serialize() {
 }
 
 void HttpResponse::sendHttpResponse() {
-  Logger::debug(_response);
+  // Logger::debug(_response);
   send(_socket, _response.c_str(), _response.length(), 0);
 }
 

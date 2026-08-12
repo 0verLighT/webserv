@@ -10,13 +10,25 @@ class RequestHandler {
     RequestHandler(HttpRequest req, int socket);
     void handleMethod();
     ~RequestHandler();
-    class Forbidden : HttpException {
+    class Forbidden : public HttpException {
       public:
-        Forbidden(): {}
+        Forbidden(int socket): HttpException(HttpStatus::FORBIDDEN, socket) {}
     };
-    class NotFound : HttpException {
+    class NotFound : public HttpException {
       public:
-        NotFound();
+        NotFound(int socket): HttpException(HttpStatus::NOT_FOUND, socket) {}
+    };
+    class MethodNotAllowed : public HttpException {
+      public:
+        MethodNotAllowed(int socket): HttpException(HttpStatus::METHOD_NOT_ALLOWED, socket) {}
+    };
+    class InternalServerError : public HttpException {
+      public:
+        InternalServerError(int socket): HttpException(HttpStatus::INTERNAL_SERVER_ERROR, socket) {}
+    };
+    class BadRequest : public HttpException {
+      public:
+        BadRequest(int socket): HttpException(HttpStatus::BAD_REQUEST, socket) {}
     };
   private:
     HttpRequest _req;
