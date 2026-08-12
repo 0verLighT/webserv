@@ -4,17 +4,12 @@
 #include "RequestHandler.hpp"
 #include "Logger.hpp"
 #include "enum/HttpStatus.hpp"
-#include "utils.hpp"
-#include <unistd.h>
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <map>
 
 RequestHandler::RequestHandler(HttpRequest req, int socket) : _req(req), _socket(socket) {}
 
 void RequestHandler::handleMethod() {
   Logger::debug("Id method : " + to_string(static_cast<int>(this->_req.getMethod())));
+  // throw 405 Method Not Allowed
   HttpResponse res("", HttpStatus::METHOD_NOT_ALLOWED, this->_socket, "text/plain");
   switch (static_cast<int>(this->_req.getMethod())) {
     case HttpMethod::GET :
@@ -36,7 +31,6 @@ void RequestHandler::handleMethod() {
       // In this case Thows 405 Method Not Allowed to the Client
     default:
       Logger::debug("DEFAULT : " + to_string(this->_req.getMethod()));
-      break;
   }
   res.sendHttpResponse();
 }
@@ -74,21 +68,20 @@ HttpResponse RequestHandler::handleDelete() {
   std::string path = "./html" + _req.getPath();
 
   if (access(path.c_str(), F_OK) == 0) {
-    Logger::debug("Attempt to delete `" + _req.getPath() + "`");
+    Logger::info("Attempt to delete `" + _req.getPath() + "`");
 
     if (access(path.c_str(), W_OK) != 0) {
       Logger::error("Deletion of file `" + _req.getPath() + "` is forbidden");
-      return (HttpResponse("Forbidden access", HttpStatus::FORBIDDEN, _socket, "TODO: REPLACE THIS"));
+      return (HttpResponse("Forbidden access", HttpStatus::FORBIDDEN, _socket, "text/html"));
     }
 
     int status = std::remove(path.c_str());
-    if (status != 0) {
-      return HttpResponse("Internal Server Error", HttpStatus::INTERNAL_SERVER_ERROR, _socket, "TODO: REPLACE THIS");
-    }
+    if (status != 0)
+      return HttpResponse("Internal Server Error", HttpStatus::INTERNAL_SERVER_ERROR, _socket, "text/html");
   }
   else {
     Logger::error("File `" + _req.getPath() + "` not found");
-    return HttpResponse("Not Found", HttpStatus::NOT_FOUND, _socket, "TODO: REPLACE THIS");
+    return HttpResponse("Not Found", HttpStatus::NOT_FOUND, _socket, "text/html");
   }
 
   return HttpResponse("No Content", HttpStatus::NO_CONTENT, _socket, "text/html");
