@@ -4,6 +4,7 @@
 #include "http/HttpResponse.hpp"
 #include "http/HttpRequest.hpp"
 #include "enum/HttpMethod.hpp"
+#include <sys/stat.h>
 
 class RequestHandler {
   public:

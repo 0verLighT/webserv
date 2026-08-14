@@ -27,6 +27,7 @@ void HttpException::SendExecptionResponse() const {
   replaceAll(content, "{ERROR}", getSentenceResponseHttpStatus(_code));
   Logger::debug(content);
   HttpResponse res(content, _code, _socket, "text/html");
+  res.sendHttpResponse();
 }
 
 const char *HttpException::what() const throw() {

@@ -48,14 +48,24 @@ HttpResponse RequestHandler::handleGet() {
     throw Forbidden(_socket);
   }
   // Fallback on 127.0.0.1:8080/ -> 127.0.0.1:8080/index.html
-  if (_req.getPath().find(".") == std::string::npos) {
+  if (_req.getPath().find("/") == std::string::npos) {
     path += "index.html";
   }
+  struct stat st;
+  if (stat(path.c_str(), &st) == -1) {
+    if (errno == EACCES) {
+      Logger::debug("Forbidden: " + path);
+      throw Forbidden(_socket);
+    }
+    Logger::debug("File not found: " + path);
+    throw NotFound(_socket);
+  }
+  
   std::ifstream file(path.c_str());
 
   if (!file.is_open()) {
     Logger::debug("File not found: " + path);
-    throw NotFound(_socket);
+    throw Forbidden(_socket);
   }
   
   std::stringstream body;

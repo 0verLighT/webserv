@@ -20,7 +20,15 @@ std::string HttpResponse::serialize() {
 
 void HttpResponse::sendHttpResponse() {
   // Logger::debug(_response);
-  send(_socket, _response.c_str(), _response.length(), 0);
+  size_t sent = 0;
+  while (sent < _response.length()) {
+    ssize_t result = send(_socket, _response.c_str() + sent, _response.length() - sent, 0);
+    if (result == -1) {
+      Logger::error("Failed to send response");
+      return;
+    }
+    sent += result;
+  }
 }
 
 HttpResponse::~HttpResponse() {}
