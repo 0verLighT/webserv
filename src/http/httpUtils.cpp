@@ -1,24 +1,6 @@
-#include "HttpResponse.hpp"
-#include "Logger.hpp"
-#include "enum/HttpStatus.hpp"
+#include "http/httpUtils.hpp"
 
-HttpResponse::HttpResponse(std::string _body, HttpStatus::Code _status, int socket, std::string contentType)
-  : _body(_body), _status(_status),  _contentType(contentType), _socket(socket) {
-    _response = serialize();
-}
-
-
-std::string HttpResponse::serialize() {
-    std::stringstream res;
-    res << "HTTP/1.1 " << _status << " " << getSentenceResponseHttpStatus(_status) << "\r\n";
-    res << "Content-Length: " << _body.length() << "\r\n";
-    res << "Content-Type: " << _contentType << "\r\n";
-    res << "\r\n";
-    res << _body; // BUG: can't display pictures as strings, terminal fills with nonsense
-    return res.str();
-}
-
-std::string HttpResponse::getSentenceResponseHttpStatus(HttpStatus::Code status) const {
+std::string getSentenceResponseHttpStatus(HttpStatus::Code status) {
   switch (status) {
     case HttpStatus::CONTINUE: return "Continue";
     case HttpStatus::SWITCHING_PROTOCOLS: return "Switching Protocols";
@@ -64,10 +46,11 @@ std::string HttpResponse::getSentenceResponseHttpStatus(HttpStatus::Code status)
   }
 }
 
-void HttpResponse::sendHttpResponse() {
-  Logger::debug("Sending HTTP response as:\n" + _response);
-  send(_socket, _response.c_str(), _response.length(), 0);
-}
 
-HttpResponse::~HttpResponse() {
+void replaceAll(std::string& str, const std::string& from, const std::string& to) {
+    size_t start_pos = 0;
+    while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
+        str.replace(start_pos, from.length(), to);
+        start_pos += to.length();
+    }
 }

@@ -3,6 +3,7 @@
 #include <string>
 #include <map>
 #include <cstdlib>
+#include <algorithm>
 #include "enum/HttpMethod.hpp"
 
 class HttpRequest {
@@ -18,10 +19,12 @@ class HttpRequest {
     std::map<std::string, std::string> parseHeaders(std::string req) const;
     HttpMethod::Code parseMethod(std::string req) const;
     std::string parsePath(std::string req) const;
+    std::string parseHttpVersion(std::string req) const;
   private:
     std::map<std::string, HttpMethod::Code> _methodMap;
     HttpMethod::Code _method;
     std::string _path;
     std::map<std::string, std::string> _headers;
     std::string _body;
+    std::string _httpVersion;
 };

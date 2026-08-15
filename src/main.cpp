@@ -6,6 +6,7 @@ int main(int argc, char **argv) {
   // until Configuration File aren't aviable
   if (argc != 1) {
     std::cerr << "Usage" << std::endl;
+    return 1;
   }
   (void)argv;
   try {
@@ -14,4 +15,5 @@ int main(int argc, char **argv) {
   } catch (const std::exception& e) {
     std::cerr << e.what() << std::endl;
   }
+  return 0;
 }
