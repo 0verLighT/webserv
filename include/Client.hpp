@@ -6,9 +6,12 @@
 
 class Client {
   public:
+    Client();
     Client(int _socket);
    ~Client();
+   void readRequest();
    int getSocket() const;
+   void closeConnection();
    std::string getReqBuffer() const;
   private:
     int _socket;
