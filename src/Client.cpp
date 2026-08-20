@@ -4,6 +4,7 @@
 #include <cstring>
 #include <unistd.h>
 #include "utils.hpp"
+#include <fcntl.h>
 
 Client::Client() : _socket(-1), _reqBuffer("") {}
 
@@ -15,6 +16,7 @@ int Client::getSocket() const {
 
 void Client::readRequest() {
   char buffer[1024] = {0};
+  fcntl(_socket, F_SETFL, O_NONBLOCK);
   ssize_t bytesRead = recv(_socket, buffer, sizeof(buffer), 0);
   if (bytesRead == -1) {
     throw std::runtime_error("recv " + std::string(strerror(errno)));
