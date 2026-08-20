@@ -5,12 +5,12 @@
 # include <sys/wait.h>
 # include <unistd.h>
 
-class Cgi {
+class CommonGatewayInterface {
   public:
-    Cgi();
-    Cgi(const Cgi& other);
-    Cgi& operator=(const Cgi& other);
-    ~Cgi();
+    CommonGatewayInterface();
+    CommonGatewayInterface(const CommonGatewayInterface& other);
+    CommonGatewayInterface& operator=(const CommonGatewayInterface& other);
+    ~CommonGatewayInterface();
     void	processInput(std::string input);
     void	createSubprocess(const std::string& filename, const std::string& args);
 };

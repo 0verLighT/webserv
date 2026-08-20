@@ -1,24 +1,24 @@
-#include "Cgi.hpp"
+#include "CommonGatewayInterface.hpp"
 
-Cgi::Cgi() {}
+CommonGatewayInterface::CommonGatewayInterface() {}
 
-Cgi::Cgi(const Cgi& other) {
+CommonGatewayInterface::CommonGatewayInterface(const CommonGatewayInterface& other) {
   *this = other;
 }
 
-Cgi& Cgi::operator=(const Cgi& other) {
+CommonGatewayInterface& CommonGatewayInterface::operator=(const CommonGatewayInterface& other) {
   (void)other;
   return *this;
 }
 
-Cgi::~Cgi() {}
+CommonGatewayInterface::~CommonGatewayInterface() {}
 
-void Cgi::processInput(std::string input) {
+void CommonGatewayInterface::processInput(std::string input) {
   (void)input;
   // end with calling processInput()
 }
 
-void Cgi::createSubprocess(const std::string& filepath, const std::string& input) {
+void CommonGatewayInterface::createSubprocess(const std::string& filepath, const std::string& input) {
   // checks should be done upstream
   pid_t pid;
   int pipefd[2];
@@ -50,7 +50,7 @@ void Cgi::createSubprocess(const std::string& filepath, const std::string& input
     execve(args[0], args, NULL); // envp useless?
     // still in child process, execve failed
     // TODO: properly handle error
-    throw std::runtime_error("Execution of CGI script failed.");
+    throw std::runtime_error("Execution of CommonGatewayInterface script failed.");
   } else {
     // Parent process
     close(pipefd[0]);
@@ -64,10 +64,10 @@ void Cgi::createSubprocess(const std::string& filepath, const std::string& input
 
     int status;
     if (waitpid(pid, &status, 0) == -1)
-      throw std::runtime_error("Waiting for CGI process failed.");
+      throw std::runtime_error("Waiting for CommonGatewayInterface process failed.");
     if (WIFEXITED(status))
-      std::cout << "CGI script exited with status: " << WEXITSTATUS(status) << std::endl;
+      std::cout << "CommonGatewayInterface script exited with status: " << WEXITSTATUS(status) << std::endl;
     else
-      std::cout << "CGI script did not exit normally." << std::endl;
+      std::cout << "CommonGatewayInterface script did not exit normally." << std::endl;
   }
 }
