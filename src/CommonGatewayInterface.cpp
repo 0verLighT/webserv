@@ -1,24 +1,15 @@
 #include "CommonGatewayInterface.hpp"
+#include "http/HttpResponse.hpp"
 
 CommonGatewayInterface::CommonGatewayInterface() {}
-
-CommonGatewayInterface::CommonGatewayInterface(const CommonGatewayInterface& other) {
-  *this = other;
-}
-
-CommonGatewayInterface& CommonGatewayInterface::operator=(const CommonGatewayInterface& other) {
-  (void)other;
-  return *this;
-}
 
 CommonGatewayInterface::~CommonGatewayInterface() {}
 
 void CommonGatewayInterface::processInput(std::string input) {
   (void)input;
-  // end with calling processInput()
 }
 
-void CommonGatewayInterface::createSubprocess(const std::string& filepath, const std::string& input) {
+std::string CommonGatewayInterface::createSubprocess(const std::string& filepath, const std::string& input) {
   // checks should be done upstream
   pid_t pid;
   int pipefd[2];
@@ -48,8 +39,6 @@ void CommonGatewayInterface::createSubprocess(const std::string& filepath, const
     args[2] = NULL;
 
     execve(args[0], args, NULL); // envp useless?
-    // still in child process, execve failed
-    // TODO: properly handle error
     throw std::runtime_error("Execution of CommonGatewayInterface script failed.");
   } else {
     // Parent process
@@ -62,6 +51,12 @@ void CommonGatewayInterface::createSubprocess(const std::string& filepath, const
     }
     close(pipefd[1]);
 
+    std::string output;
+    char buffer[4096];
+    ssize_t n;
+    while ((n = read(pipefd[0], buffer, sizeof(buffer))) > 0)
+        output.append(buffer, n);
+
     int status;
     if (waitpid(pid, &status, 0) == -1)
       throw std::runtime_error("Waiting for CommonGatewayInterface process failed.");
@@ -69,5 +64,7 @@ void CommonGatewayInterface::createSubprocess(const std::string& filepath, const
       std::cout << "CommonGatewayInterface script exited with status: " << WEXITSTATUS(status) << std::endl;
     else
       std::cout << "CommonGatewayInterface script did not exit normally." << std::endl;
+
+    return (output);
   }
 }
