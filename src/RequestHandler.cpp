@@ -8,37 +8,32 @@
 RequestHandler::RequestHandler(HttpRequest req, int socket) : _req(req), _socket(socket) {}
 
 void RequestHandler::handleMethod() {
-  Logger::debug("Id method : " + to_string(static_cast<int>(this->_req.getMethod())));
-  // throw 405 Method Not Allowed
   HttpResponse res("", HttpStatus::METHOD_NOT_ALLOWED, this->_socket, "text/plain");
   switch (static_cast<int>(this->_req.getMethod())) {
     case HttpMethod::GET :
-      Logger::debug("GET : " + to_string(this->_req.getMethod()));
+      // Logger::debug("GET : " + to_string(this->_req.getMethod()));
       res = handleGet();
       break;
     case HttpMethod::POST:
-      Logger::debug("POST : " + to_string(this->_req.getMethod()));
+      // Logger::debug("POST : " + to_string(this->_req.getMethod()));
       res = handlePost();
       break;
     case HttpMethod::PUT:
-      Logger::debug("PUT : " + to_string(this->_req.getMethod()));
+      // Logger::debug("PUT : " + to_string(this->_req.getMethod()));
       res = handlePut();
       break;
     case HttpMethod::DELETE:
-      Logger::debug("DELETE : " + to_string(this->_req.getMethod()));
+      // Logger::debug("DELETE : " + to_string(this->_req.getMethod()));
       res = handleDelete();
       break;
-      // In this case Thows 405 Method Not Allowed to the Client
     default:
-      Logger::debug("DEFAULT : " + to_string(this->_req.getMethod()));
       throw MethodNotAllowed(_socket);
-      break;
   }
   res.sendHttpResponse();
 }
 
 HttpResponse RequestHandler::handleGet() {
-  Logger::debug("Handling GET " + _req.getPath());
+  // Logger::debug("Handling GET " + _req.getPath());
   std::string path = "./html" + _req.getPath();
   if (_req.getPath().find("..") != std::string::npos) {
     throw Forbidden(_socket);

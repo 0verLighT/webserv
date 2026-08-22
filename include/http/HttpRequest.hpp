@@ -5,6 +5,8 @@
 #include <cstdlib>
 #include <algorithm>
 #include "enum/HttpMethod.hpp"
+#include "HttpException.hpp"
+#include "enum/HttpStatus.hpp"
 
 class HttpRequest {
   public:
@@ -20,6 +22,11 @@ class HttpRequest {
     HttpMethod::Code parseMethod(std::string req) const;
     std::string parsePath(std::string req) const;
     std::string parseHttpVersion(std::string req) const;
+    void CheckHttpVersion(int socket);
+    class HttpVersionNotSupported : public HttpException {
+      public:
+        HttpVersionNotSupported(int socket) : HttpException(HttpStatus::HTTP_VERSION_NOT_SUPPORTED, socket) {}
+    };
   private:
     std::map<std::string, HttpMethod::Code> _methodMap;
     HttpMethod::Code _method;

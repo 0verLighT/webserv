@@ -6,11 +6,16 @@
 
 class Client {
   public:
+    Client();
     Client(int _socket);
    ~Client();
+   bool readRequest();
    int getSocket() const;
+   bool getReadTowrite() const;
+   int closeConnection();
    std::string getReqBuffer() const;
   private:
     int _socket;
     std::string _reqBuffer;
+    bool _readToWrite;
 };
