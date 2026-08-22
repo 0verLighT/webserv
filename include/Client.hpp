@@ -9,11 +9,13 @@ class Client {
     Client();
     Client(int _socket);
    ~Client();
-   void readRequest();
+   bool readRequest();
    int getSocket() const;
-   void closeConnection();
+   bool getReadTowrite() const;
+   int closeConnection();
    std::string getReqBuffer() const;
   private:
     int _socket;
     std::string _reqBuffer;
+    bool _readToWrite;
 };

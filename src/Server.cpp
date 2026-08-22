@@ -2,8 +2,10 @@
 #include "Logger.hpp"
 #include "utils.hpp"
 #include <exception>
+#include <sys/fcntl.h>
 #include <sys/poll.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 volatile sig_atomic_t eventLoop = 1;
 
@@ -19,6 +21,7 @@ Server::Server(int port): _port(port) {
   _serverAddress.sin_port = htons(_port);
   _serverAddress.sin_addr.s_addr = INADDR_ANY;
   _socket = socket(AF_INET, SOCK_STREAM, 0);
+  fcntl(_socket, F_SETFL, O_NONBLOCK);
   Logger::info("Socket Created at " + to_string(_port));
   if (_socket == -1) {
     throw std::runtime_error("socket: " + std::string(strerror(errno)));
@@ -49,6 +52,7 @@ void Server::run() {
   // Catch Crtl + C signal
   while (eventLoop) {
     std::vector<struct pollfd> pollFds;
+    std::vector<int> clientsToRemove;
 
     struct pollfd serverFd;
     serverFd.fd = _socket;
@@ -58,7 +62,11 @@ void Server::run() {
     for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); ++it) {
       struct pollfd clientFd;
       clientFd.fd = it->first;
-      clientFd.events = POLLIN;
+      if (it->second.getReadTowrite()) {
+        clientFd.events = POLLOUT;
+      } else {
+        clientFd.events = POLLIN;
+      }
       pollFds.push_back(clientFd);
     }
     int timeout = 5000;
@@ -69,7 +77,7 @@ void Server::run() {
         break;
     }
     if (ret == 0) {
-      Logger::info("timeout");
+      Logger::info("poll : timeout");
       continue;
     }
 
@@ -77,6 +85,7 @@ void Server::run() {
       if (pollFds[i].revents & POLLIN) {
         if (pollFds[i].fd == _socket) {
           int newClientFd = accept(_socket, NULL, NULL);
+          fcntl(newClientFd, F_SETFL, O_NONBLOCK);
           if (newClientFd == -1) {
             Logger::error("accept: " + std::string(strerror(errno)));
             continue;
@@ -86,9 +95,12 @@ void Server::run() {
           Logger::info("New client connected: " + to_string(newClientFd));
         } else {
           int clientSock = pollFds[i].fd;
-          clients[clientSock].readRequest();
+          int isAlive = clients[clientSock].readRequest();
+          if (!isAlive) {
+            clients[clientSock].closeConnection();
+            clientsToRemove.push_back(clientSock);
+          }
           Logger::info("Request read from client: " + to_string(clientSock));
-          pollFds[i].events = POLLOUT;
         }
       }
       if (pollFds[i].revents & POLLOUT) {
@@ -103,14 +115,15 @@ void Server::run() {
           Logger::error("Httpexecption :" + to_string(e.what()));
           e.SendExecptionResponse();
         } catch (const std::exception& e) {
-          Logger::error("Exceprion :" + to_string(e.what()));
+          Logger::error("Exception :" + to_string(e.what()));
         }
+        clients[clientSocket].closeConnection();
+        clientsToRemove.push_back(clientSocket);
       }
     }
-    // for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); ++it) {
-    //   it->second.closeConnection();
-    //   clients.erase(it);
-    // }
+    for (std::vector<int>::iterator it = clientsToRemove.begin(); it != clientsToRemove.end(); ++it) {
+      clients.erase(*it);
+    }
     // Logger::info("Cycle Event Loop");
   }
 }

@@ -27,12 +27,15 @@ void HttpRequest::parseRequest(std::string buffer) {
     std::string fristLine = buffer.substr(0, headerEnd);
 
     _httpVersion = parseHttpVersion(fristLine);
-    if (_httpVersion != "1.1") {
-      // throw 505 error page
-    }
     _method = parseMethod(fristLine);
     _path = parsePath(fristLine);
     _headers = parseHeaders(buffer.substr(headerEnd + 2));
+  }
+}
+
+void  HttpRequest::CheckHttpVersion(int socket) {
+  if (_httpVersion != "1.1") {
+    throw HttpVersionNotSupported(socket);
   }
 }
 
@@ -59,6 +62,8 @@ std::map<std::string, std::string> HttpRequest::parseHeaders(std::string req) co
       }
       std::transform(key.begin(), key.end(), key.begin(), ::tolower);
       headers[key] = value;
+      // Logger::info(key);
+      // Logger::info(value);
     }
     req = req.substr(pos + 2);
   }
