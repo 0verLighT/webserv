@@ -1,4 +1,6 @@
 #include "http/httpUtils.hpp"
+#include <string>
+#include <sys/dirent.h>
 
 std::string getSentenceResponseHttpStatus(HttpStatus::Code status) {
   switch (status) {
@@ -46,6 +48,31 @@ std::string getSentenceResponseHttpStatus(HttpStatus::Code status) {
   }
 }
 
+const std::string& generateAutoindexPage(std::string path) {
+  static std::string autoindex = "";
+  DIR* dir = opendir(path.c_str());
+  if (dir == NULL) {
+    Logger::error("opendir : " + std::string(strerror(errno)));
+    return autoindex;
+  }
+  autoindex = "<html><body><h1>Index of " + path.substr(2) + "</h1><ul></br>";
+  struct dirent* entry;
+  while ((entry = readdir(dir)) != NULL) {
+    if (strcmp(entry->d_name, ".") == 0 || (strcmp(entry->d_name, "..") == 0 && path == "./html"))
+      continue;
+    if (entry->d_type == DT_DIR && strcmp(entry->d_name, "..") != 0) {
+      autoindex += "<li><a href=\"" + std::string(entry->d_name) + "/\">";
+      autoindex += entry->d_name + std::string("/");
+    } else {
+      autoindex += "<li><a href=\"" + std::string(entry->d_name) + "\">";
+      autoindex += entry->d_name;
+    }
+    autoindex += "</a></li>";
+  }
+  closedir(dir);
+  autoindex += "</ul></body></html>";
+  return autoindex;
+}
 
 void replaceAll(std::string& str, const std::string& from, const std::string& to) {
     size_t start_pos = 0;

@@ -4,6 +4,7 @@
 #include "RequestHandler.hpp"
 #include "Logger.hpp"
 #include "enum/HttpStatus.hpp"
+#include <cstdio>
 
 RequestHandler::RequestHandler(HttpRequest req, int socket) : _req(req), _socket(socket) {}
 
@@ -38,9 +39,17 @@ HttpResponse RequestHandler::handleGet() {
   if (_req.getPath().find("..") != std::string::npos) {
     throw Forbidden(_socket);
   }
-  // Fallback on 127.0.0.1:8080/ -> 127.0.0.1:8080/index.html
-  if (_req.getPath().find("/") == std::string::npos) {
-    path += "index.html";
+  bool autoindex = true;
+  if (_req.getPath().back() == '/') {
+    if (autoindex) {
+      std::string autoindexPage = generateAutoindexPage(path);
+      if (autoindexPage.empty()) {
+        throw NotFound(_socket);
+      }
+      return HttpResponse(autoindexPage, HttpStatus::OK, _socket, "text/html");
+    } else {
+      throw Forbidden(_socket);
+    }
   }
   struct stat st;
   if (stat(path.c_str(), &st) == -1) {
@@ -188,6 +197,8 @@ static const std::map<std::string, std::string>& miniTable() {
   }
   return contentType;
 }
+
+
 
 const std::string& RequestHandler::getContentTypeOfPath(std::string path) const {
   Logger::debug(path);
