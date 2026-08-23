@@ -40,7 +40,7 @@ HttpResponse RequestHandler::handleGet() {
     throw Forbidden(_socket);
   }
   bool autoindex = true;
-  if (_req.getPath().back() == '/') {
+  if (_req.getPath()[_req.getPath().size() - 1] == '/') {
     if (autoindex) {
       std::string autoindexPage = generateAutoindexPage(path);
       if (autoindexPage.empty()) {

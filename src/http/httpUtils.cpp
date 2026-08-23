@@ -1,6 +1,5 @@
 #include "http/httpUtils.hpp"
 #include <string>
-#include <sys/dirent.h>
 
 std::string getSentenceResponseHttpStatus(HttpStatus::Code status) {
   switch (status) {
@@ -55,10 +54,10 @@ const std::string& generateAutoindexPage(std::string path) {
     Logger::error("opendir : " + std::string(strerror(errno)));
     return autoindex;
   }
-  autoindex = "<html><body><h1>Index of " + path.substr(2) + "</h1><ul></br>";
+  autoindex = "<html><body><h1>Index of " + path.substr(2) + "</h1><ul>";
   struct dirent* entry;
   while ((entry = readdir(dir)) != NULL) {
-    if (strcmp(entry->d_name, ".") == 0 || (strcmp(entry->d_name, "..") == 0 && path == "./html"))
+    if (strcmp(entry->d_name, ".") == 0 || (strcmp(entry->d_name, "..") == 0 && path == "./html/"))
       continue;
     if (entry->d_type == DT_DIR && strcmp(entry->d_name, "..") != 0) {
       autoindex += "<li><a href=\"" + std::string(entry->d_name) + "/\">";
