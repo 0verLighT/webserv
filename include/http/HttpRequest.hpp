@@ -20,9 +20,10 @@ class HttpRequest {
     std::string getPath() const;
     std::map<std::string, std::string> parseHeaders(std::string req) const;
     HttpMethod::Code parseMethod(std::string req) const;
-    std::string parsePath(std::string req) const;
+    std::string parsePathWithQueries(std::string req) const;
     std::string parseHttpVersion(std::string req) const;
     void CheckHttpVersion(int socket);
+    std::string getQuery(std::string key) const;
     class HttpVersionNotSupported : public HttpException {
       public:
         HttpVersionNotSupported(int socket) : HttpException(HttpStatus::HTTP_VERSION_NOT_SUPPORTED, socket) {}
@@ -34,4 +35,5 @@ class HttpRequest {
     std::map<std::string, std::string> _headers;
     std::string _body;
     std::string _httpVersion;
+    std::map<std::string, std::string> _queries;
 };

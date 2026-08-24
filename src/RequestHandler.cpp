@@ -36,6 +36,7 @@ void RequestHandler::handleMethod() {
 HttpResponse RequestHandler::handleGet() {
   // Logger::debug("Handling GET " + _req.getPath());
   std::string path = "./html" + _req.getPath();
+  Logger::info(path);
   if (_req.getPath().find("..") != std::string::npos) {
     throw Forbidden(_socket);
   }

@@ -43,7 +43,6 @@ Server::~Server() {
   Logger::info("Server Destroyed");
 }
 
-
 // POLLINT -> read request
 // POLLOUT -> write response
 void Server::run() {
