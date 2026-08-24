@@ -122,7 +122,8 @@ std::string HttpRequest::parsePathWithQueries(std::string req) const {
           continue;
         }
       }
-    return path.empty() ? decoded : path;
+      return path.empty() ? decoded : path;
+    }
   }
   return "";
 }
