@@ -199,8 +199,6 @@ static const std::map<std::string, std::string>& miniTable() {
   return contentType;
 }
 
-
-
 const std::string& RequestHandler::getContentTypeOfPath(std::string path) const {
   Logger::debug(path);
   static const std::string defaultType = "application/octet-stream";

@@ -1,10 +1,12 @@
 #include "http/HttpRequest.hpp"
 #include "Logger.hpp"
+#include <cerrno>
 #include <cstddef>
 #include <fcntl.h>
 #include <filesystem>
 #include <iostream>
 #include <iterator>
+#include <map>
 #include <string>
 #include <sys/socket.h>
 #include "enum/HttpMethod.hpp"
@@ -94,7 +96,7 @@ HttpMethod::Code HttpRequest::parseMethod(std::string req) const {
   return HttpMethod::UNKNOWN;
 }
 
-std::string HttpRequest::parsePathWithQueries(std::string req) const {
+std::string HttpRequest::parsePathWithQueries(std::string req) {
   size_t pos = req.find(" ");
   std::string path;
   if (pos != std::string::npos) {
@@ -112,20 +114,41 @@ std::string HttpRequest::parsePathWithQueries(std::string req) const {
     }
     size_t hasQueries = decoded.find("?");
     if (hasQueries != std::string::npos) {
+      Logger::info("Query detected");
       path = decoded.substr(0, hasQueries);
-      size_t start = 0;
-      std::string queries = decoded.substr(hasQueries + 1);
-      while (start <= queries.length()) {
-        size_t separator = queries.find("&", start);
-
-        if (separator != std::string::npos) {
-          continue;
-        }
+      _queries = parseQueries(decoded, hasQueries);
       }
       return path.empty() ? decoded : path;
-    }
   }
   return "";
+}
+
+
+std::map<std::string, std::string> HttpRequest::parseQueries(std::string decoded, size_t hasQueries) const {
+  std::map<std::string, std::string>queriesMap;
+  
+  size_t start = 0;
+  std::string queries = decoded.substr(hasQueries + 1);
+  while (start <= queries.length()) {
+    size_t separator = queries.find("&", start);
+
+    if (separator == std::string::npos) {
+      separator = queries.length();
+    }
+
+    std::string keyAndValue = queries.substr(start, separator - start);
+    size_t eqPos = keyAndValue.find("=");
+    if (eqPos == std::string::npos) {
+      std::string key = keyAndValue.substr(0, eqPos);
+      std::string value = keyAndValue.substr(eqPos + 1);
+      queriesMap[key] = value;
+      Logger::info("key : " + key + " Value : " + value);
+    } else if (!keyAndValue.empty()) {
+      queriesMap[keyAndValue] = "";
+    }
+    start = separator + 1;
+  }
+  return queriesMap;
 }
 
 // return 1.1, 2.0
