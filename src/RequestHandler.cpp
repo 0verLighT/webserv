@@ -12,6 +12,8 @@
 #include <cstdio>
 #include <cstring>
 #include <dirent.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <iterator>
 #include <unistd.h>
 
@@ -43,22 +45,13 @@ void RequestHandler::handleMethod() {
 }
 
 bool RequestHandler::isDirectory(std::string path) const {
-  size_t subPathPos = path.find_last_of("/");
-  std::string subPath = path.substr(0, subPathPos + 1);
-  std::string isFolder = path.substr(subPathPos + 1);
-  DIR* dir = opendir(subPath.c_str());
-  if (dir == NULL) {
-    Logger::error("opendir : " + std::string(strerror(errno)));
+  struct stat st;
+
+  if (stat(path.c_str(), &st) != 0) {
+    Logger::error("stat : " + std::string(strerror(errno)));
     return false;
   }
-  struct dirent* entry;
-
-  while ((entry = readdir(dir)) != NULL) {
-    if (entry->d_type == DT_DIR && entry->d_name == isFolder)
-      return true;
-  }
-  closedir(dir);
-  return false;
+  return S_ISDIR(st.st_mode);
 }
 
 HttpResponse RequestHandler::handleGet() {
