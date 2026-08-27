@@ -44,6 +44,7 @@ class RequestHandler {
     int _socket;
 
     const std::string& getContentTypeOfPath(std::string path) const;
+    bool isDirectory(std::string path) const;
     HttpResponse handleGet();
     HttpResponse handlePost();
     HttpResponse handlePut();

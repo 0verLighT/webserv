@@ -4,7 +4,16 @@
 #include "RequestHandler.hpp"
 #include "Logger.hpp"
 #include "enum/HttpStatus.hpp"
+#include "http/httpUtils.hpp"
+#include <algorithm>
+#include <atomic>
+#include <cerrno>
+#include <cstddef>
 #include <cstdio>
+#include <cstring>
+#include <dirent.h>
+#include <iterator>
+#include <unistd.h>
 
 RequestHandler::RequestHandler(HttpRequest req, int socket) : _req(req), _socket(socket) {}
 
@@ -33,15 +42,33 @@ void RequestHandler::handleMethod() {
   res.sendHttpResponse();
 }
 
+bool RequestHandler::isDirectory(std::string path) const {
+  size_t subPathPos = path.find_last_of("/");
+  std::string subPath = path.substr(0, subPathPos + 1);
+  std::string isFolder = path.substr(subPathPos + 1);
+  DIR* dir = opendir(subPath.c_str());
+  if (dir == NULL) {
+    Logger::error("opendir : " + std::string(strerror(errno)));
+    return false;
+  }
+  struct dirent* entry;
+
+  while ((entry = readdir(dir)) != NULL) {
+    if (entry->d_type == DT_DIR && entry->d_name == isFolder)
+      return true;
+  }
+  closedir(dir);
+  return false;
+}
+
 HttpResponse RequestHandler::handleGet() {
-  // Logger::debug("Handling GET " + _req.getPath());
   std::string path = "./html" + _req.getPath();
   Logger::info(path);
   if (_req.getPath().find("..") != std::string::npos) {
     throw Forbidden(_socket);
   }
   bool autoindex = true;
-  if (_req.getPath()[_req.getPath().size() - 1] == '/') {
+  if (_req.getPath()[_req.getPath().size() - 1] == '/' || isDirectory(path)) {
     if (autoindex) {
       std::string autoindexPage = generateAutoindexPage(path);
       if (autoindexPage.empty()) {
