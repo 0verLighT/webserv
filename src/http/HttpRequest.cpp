@@ -1,7 +1,12 @@
 #include "http/HttpRequest.hpp"
 #include "Logger.hpp"
+#include <cerrno>
+#include <cstddef>
+#include <fcntl.h>
+#include <filesystem>
 #include <iostream>
 #include <iterator>
+#include <map>
 #include <string>
 #include <sys/socket.h>
 #include "enum/HttpMethod.hpp"
@@ -25,20 +30,32 @@ void HttpRequest::parseRequest(std::string buffer) {
   size_t headerEnd = buffer.find("\r\n");
   if (headerEnd != std::string::npos) {
     std::string fristLine = buffer.substr(0, headerEnd);
+    Logger::info(fristLine);
 
     _httpVersion = parseHttpVersion(fristLine);
-    if (_httpVersion != "1.1") {
-      // throw 505 error page
-    }
     _method = parseMethod(fristLine);
-    _path = parsePath(fristLine);
+    _path = parsePathWithQueries(fristLine);
     _headers = parseHeaders(buffer.substr(headerEnd + 2));
+  }
+}
+
+void  HttpRequest::CheckHttpVersion(int socket) {
+  if (_httpVersion != "1.1") {
+    throw HttpVersionNotSupported(socket);
   }
 }
 
 std::string HttpRequest::getHeader(std::string key) const {
   std::map<std::string, std::string>::const_iterator it = _headers.find(key);
   if (it != _headers.end()) {
+    return it->second;
+  }
+  return "";
+}
+
+std::string HttpRequest::getQuery(std::string key) const {
+  std::map<std::string, std::string>::const_iterator it = _queries.find(key);
+  if (it != _queries.end()) {
     return it->second;
   }
   return "";
@@ -59,6 +76,8 @@ std::map<std::string, std::string> HttpRequest::parseHeaders(std::string req) co
       }
       std::transform(key.begin(), key.end(), key.begin(), ::tolower);
       headers[key] = value;
+      // Logger::info(key);
+      // Logger::info(value);
     }
     req = req.substr(pos + 2);
   }
@@ -77,24 +96,59 @@ HttpMethod::Code HttpRequest::parseMethod(std::string req) const {
   return HttpMethod::UNKNOWN;
 }
 
-std::string HttpRequest::parsePath(std::string req) const {
+std::string HttpRequest::parsePathWithQueries(std::string req) {
   size_t pos = req.find(" ");
+  std::string path;
   if (pos != std::string::npos) {
-    std::string path = req.substr(pos + 1, req.find(" ", pos + 1) - pos - 1);
+    std::string pathWithQueries = req.substr(pos + 1, req.find(" ", pos + 1) - pos - 1);
     std::string decoded;
-    for (size_t i = 0; i < path.length(); ++i) {
-      if (path[i] == '%') {
-        std::string hex = path.substr(i + 1, 2);
+    for (size_t i = 0; i < pathWithQueries.length(); ++i) {
+      if (pathWithQueries[i] == '%') {
+        std::string hex = pathWithQueries.substr(i + 1, 2);
         char c = static_cast<char>(std::strtol(hex.c_str(), NULL, 16));
         decoded += c;
         i += 2;
       } else {
-        decoded += path[i];
+        decoded += pathWithQueries[i];
       }
     }
-    return decoded;
+    size_t hasQueries = decoded.find("?");
+    if (hasQueries != std::string::npos) {
+      Logger::info("Query detected");
+      path = decoded.substr(0, hasQueries);
+      _queries = parseQueries(decoded, hasQueries);
+      }
+      return path.empty() ? decoded : path;
   }
   return "";
+}
+
+
+std::map<std::string, std::string> HttpRequest::parseQueries(std::string decoded, size_t hasQueries) const {
+  std::map<std::string, std::string>queriesMap;
+  
+  size_t start = 0;
+  std::string queries = decoded.substr(hasQueries + 1);
+  while (start <= queries.length()) {
+    size_t separator = queries.find("&", start);
+
+    if (separator == std::string::npos) {
+      separator = queries.length();
+    }
+
+    std::string keyAndValue = queries.substr(start, separator - start);
+    size_t eqPos = keyAndValue.find("=");
+    if (eqPos == std::string::npos) {
+      std::string key = keyAndValue.substr(0, eqPos);
+      std::string value = keyAndValue.substr(eqPos + 1);
+      queriesMap[key] = value;
+      Logger::info("key : " + key + " Value : " + value);
+    } else if (!keyAndValue.empty()) {
+      queriesMap[keyAndValue] = "";
+    }
+    start = separator + 1;
+  }
+  return queriesMap;
 }
 
 // return 1.1, 2.0
