@@ -6,7 +6,6 @@
 #include "enum/HttpStatus.hpp"
 #include "http/httpUtils.hpp"
 #include <algorithm>
-#include <atomic>
 #include <cerrno>
 #include <cstddef>
 #include <cstdio>
