@@ -1,7 +1,11 @@
 #include "Server.hpp"
 #include "Logger.hpp"
-#include "http/HttpException.hpp"
+#include "utils.hpp"
 #include <exception>
+#include <sys/fcntl.h>
+#include <sys/poll.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 volatile sig_atomic_t eventLoop = 1;
 
@@ -17,6 +21,7 @@ Server::Server(int port): _port(port) {
   _serverAddress.sin_port = htons(_port);
   _serverAddress.sin_addr.s_addr = INADDR_ANY;
   _socket = socket(AF_INET, SOCK_STREAM, 0);
+  fcntl(_socket, F_SETFL, O_NONBLOCK);
   Logger::info("Socket Created at " + to_string(_port));
   if (_socket == -1) {
     throw std::runtime_error("socket: " + std::string(strerror(errno)));
@@ -38,48 +43,86 @@ Server::~Server() {
   Logger::info("Server Destroyed");
 }
 
+// POLLINT -> read request
+// POLLOUT -> write response
 void Server::run() {
   signal(SIGINT, handlerSignal);
+  std::map<int, Client> clients;
   // Catch Crtl + C signal
   while (eventLoop) {
-    fd_set set;
-    FD_ZERO(&set);
-    FD_SET(_socket, &set);
+    std::vector<struct pollfd> pollFds;
+    std::vector<int> clientsToRemove;
 
-    struct timeval timeout;
-    timeout.tv_sec = 1;
-    timeout.tv_usec = 0;
-    int activity = select(_socket + 1, &set, NULL, NULL, &timeout);
-    if (activity == -1) {
+    struct pollfd serverFd;
+    serverFd.fd = _socket;
+    serverFd.events = POLLIN;
+    pollFds.push_back(serverFd);
+
+    for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); ++it) {
+      struct pollfd clientFd;
+      clientFd.fd = it->first;
+      if (it->second.getReadTowrite()) {
+        clientFd.events = POLLOUT;
+      } else {
+        clientFd.events = POLLIN;
+      }
+      pollFds.push_back(clientFd);
+    }
+    int timeout = 5000;
+    int ret = poll(&pollFds[0], pollFds.size(), timeout);
+    if (ret < 0) {
+      Logger::error("poll: " + std::string(strerror(errno)));
       if (!eventLoop)
         break;
-      std::cerr << "select" << std::endl;
+    }
+    if (ret == 0) {
+      Logger::info("poll : timeout");
       continue;
     }
-    if (activity == 0)
-      continue;
-    if (FD_ISSET(_socket, &set)) {
-      sockaddr_in clientAddress;
-      socklen_t clientLen = sizeof(clientAddress);
-      int clientSocket = accept(_socket, reinterpret_cast<sockaddr*>(&clientAddress), &clientLen);
-      if (clientSocket == -1) {
-        std::cerr << "accept: " << strerror(errno) << std::endl;
-        continue;
-      };
 
-      Client client(clientSocket);
-      HttpRequest req;
-
-      req.parseRequest(client.getReqBuffer());
-      RequestHandler handler(req, client.getSocket());
-      try {
-        handler.handleMethod();
-      } catch (const HttpException& e) {
-        Logger::info("HttpException trigger : " + std::string(e.what()));
-        e.SendExecptionResponse();
-        continue;
+    for (size_t i = 0; i < pollFds.size(); ++i) {
+      if (pollFds[i].revents & POLLIN) {
+        if (pollFds[i].fd == _socket) {
+          int newClientFd = accept(_socket, NULL, NULL);
+          fcntl(newClientFd, F_SETFL, O_NONBLOCK);
+          if (newClientFd == -1) {
+            Logger::error("accept: " + std::string(strerror(errno)));
+            continue;
+          }
+          Client newClient(newClientFd);
+          clients[newClientFd] = newClient;
+          Logger::info("New client connected: " + to_string(newClientFd));
+        } else {
+          int clientSock = pollFds[i].fd;
+          int isAlive = clients[clientSock].readRequest();
+          if (!isAlive) {
+            clients[clientSock].closeConnection();
+            clientsToRemove.push_back(clientSock);
+          }
+          Logger::info("Request read from client: " + to_string(clientSock));
+        }
       }
-      Logger::info("Cycle Event Loop");
+      if (pollFds[i].revents & POLLOUT) {
+        int clientSocket = pollFds[i].fd;
+        HttpRequest req;
+
+        req.parseRequest(clients[clientSocket].getReqBuffer());
+        RequestHandler handler(req, clientSocket);
+        try {
+          handler.handleMethod();
+        } catch (const HttpException& e) {
+          Logger::error("Httpexecption :" + to_string(e.what()));
+          e.SendExecptionResponse();
+        } catch (const std::exception& e) {
+          Logger::error("Exception :" + to_string(e.what()));
+        }
+        clients[clientSocket].closeConnection();
+        clientsToRemove.push_back(clientSocket);
+      }
     }
+    for (std::vector<int>::iterator it = clientsToRemove.begin(); it != clientsToRemove.end(); ++it) {
+      clients.erase(*it);
+    }
+    // Logger::info("Cycle Event Loop");
   }
 }

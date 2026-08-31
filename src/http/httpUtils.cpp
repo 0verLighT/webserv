@@ -1,4 +1,9 @@
 #include "http/httpUtils.hpp"
+#include <ctime>
+#include <pthread.h>
+#include <sstream>
+#include <string>
+#include <sys/stat.h>
 
 std::string getSentenceResponseHttpStatus(HttpStatus::Code status) {
   switch (status) {
@@ -46,6 +51,69 @@ std::string getSentenceResponseHttpStatus(HttpStatus::Code status) {
   }
 }
 
+const std::string& generateAutoindexPage(std::string path) {
+  static std::string autoindex = "";
+  DIR* dir = opendir(path.c_str());
+  if (dir == NULL) {
+    Logger::error("opendir : " + std::string(strerror(errno)));
+    return autoindex;
+  }
+  autoindex = "<html><head><meta charset=\"UTF-8\" />";
+  autoindex += "<style>table {width: 100%;} td {padding: 8px;}";
+  autoindex += "img {width: 10%; height: auto; transform: scaleX(-1);}";
+  autoindex += "th {padding: 8px; text-decoration: underline;";
+  autoindex += "font-weight: normal; text-align: left}</style></head>";
+  autoindex += "<body>";
+  autoindex += "<img src=\"/assets/blahaj.png\" alt=\"blahaj\">";
+  autoindex += "<p>webserv HTTP/1.1</p><h1>Index of " + path.substr(2) + "</h1><table>";
+  autoindex += "<tr><th>Filename</th><th>Size</th><th>Permissions</th><th>Last modified</th></tr>";
+  struct dirent* entry;
+  struct stat st;
+  while ((entry = readdir(dir)) != NULL) {
+    autoindex += "<tr>";
+    if (strcmp(entry->d_name, ".") == 0 || (strcmp(entry->d_name, "..") == 0 && path == "./html/"))
+      continue;
+    std::string fullPath = path;
+    
+    if (!fullPath.empty() && fullPath[fullPath.size() - 1] != '/')
+      fullPath += "/";
+    fullPath += entry->d_name;
+
+    std::string sizeFile = "-";
+    std::string permsFile = "-";
+    std::string lastEditFile = "-";
+
+    if (stat(fullPath.c_str(), &st) == 0) {
+      char tmp[80];
+      struct std::tm *ltm = std::localtime(&st.st_mtime);
+      std::strftime(tmp, sizeof(tmp), "%d-%b-%Y %H:%M", ltm);
+      lastEditFile = tmp;
+      if (S_ISDIR(st.st_mode)) {
+        sizeFile = "-";
+      } else {
+        std::stringstream ss;
+        ss << st.st_size;
+        sizeFile = ss.str();
+      }
+    }
+    if (entry->d_type == DT_DIR && strcmp(entry->d_name, "..") != 0) {
+      autoindex += "<td><a href=\"" + std::string(entry->d_name) + "/\">";
+      autoindex += entry->d_name + std::string("/");
+      autoindex += "</td>";
+    } else {
+      autoindex += "<td><a href=\"" + std::string(entry->d_name) + "\">";
+      autoindex += entry->d_name;
+      autoindex += "</td>";
+    }
+    autoindex += "<td>" + sizeFile + "</td>";
+    autoindex += "<td>" + permsFile + "</td>";
+    autoindex += "<td>" + lastEditFile + "</td>";
+    autoindex += "</tr>";
+  }
+  closedir(dir);
+  autoindex += "</table></body></html>";
+  return autoindex;
+}
 
 void replaceAll(std::string& str, const std::string& from, const std::string& to) {
     size_t start_pos = 0;

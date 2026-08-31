@@ -4,48 +4,72 @@
 #include "RequestHandler.hpp"
 #include "Logger.hpp"
 #include "enum/HttpStatus.hpp"
+#include "http/httpUtils.hpp"
+#include <algorithm>
+#include <cerrno>
+#include <cstddef>
+#include <cstdio>
+#include <cstring>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <iterator>
+#include <unistd.h>
 
 RequestHandler::RequestHandler(HttpRequest req, int socket) : _req(req), _socket(socket) {}
 
 void RequestHandler::handleMethod() {
-  Logger::debug("Id method : " + to_string(static_cast<int>(this->_req.getMethod())));
-  // throw 405 Method Not Allowed
   HttpResponse res("", HttpStatus::METHOD_NOT_ALLOWED, this->_socket, "text/plain");
   switch (static_cast<int>(this->_req.getMethod())) {
     case HttpMethod::GET :
-      Logger::debug("GET : " + to_string(this->_req.getMethod()));
+      // Logger::debug("GET : " + to_string(this->_req.getMethod()));
       res = handleGet();
       break;
     case HttpMethod::POST:
-      Logger::debug("POST : " + to_string(this->_req.getMethod()));
+      // Logger::debug("POST : " + to_string(this->_req.getMethod()));
       res = handlePost();
       break;
     case HttpMethod::PUT:
-      Logger::debug("PUT : " + to_string(this->_req.getMethod()));
+      // Logger::debug("PUT : " + to_string(this->_req.getMethod()));
       res = handlePut();
       break;
     case HttpMethod::DELETE:
-      Logger::debug("DELETE : " + to_string(this->_req.getMethod()));
+      // Logger::debug("DELETE : " + to_string(this->_req.getMethod()));
       res = handleDelete();
       break;
-      // In this case Thows 405 Method Not Allowed to the Client
     default:
-      Logger::debug("DEFAULT : " + to_string(this->_req.getMethod()));
       throw MethodNotAllowed(_socket);
-      break;
   }
   res.sendHttpResponse();
 }
 
+bool RequestHandler::isDirectory(std::string path) const {
+  struct stat st;
+
+  if (stat(path.c_str(), &st) != 0) {
+    Logger::error("stat : " + std::string(strerror(errno)));
+    return false;
+  }
+  return S_ISDIR(st.st_mode);
+}
+
 HttpResponse RequestHandler::handleGet() {
-  Logger::debug("Handling GET " + _req.getPath());
   std::string path = "./html" + _req.getPath();
+  Logger::info(path);
   if (_req.getPath().find("..") != std::string::npos) {
     throw Forbidden(_socket);
   }
-  // Fallback on 127.0.0.1:8080/ -> 127.0.0.1:8080/index.html
-  if (_req.getPath().find("/") == std::string::npos) {
-    path += "index.html";
+  bool autoindex = true;
+  if (_req.getPath()[_req.getPath().size() - 1] == '/' || isDirectory(path)) {
+    if (autoindex) {
+      std::string autoindexPage = generateAutoindexPage(path);
+      if (autoindexPage.empty()) {
+        throw NotFound(_socket);
+      }
+      return HttpResponse(autoindexPage, HttpStatus::OK, _socket, "text/html");
+    } else {
+      throw Forbidden(_socket);
+    }
   }
   struct stat st;
   if (stat(path.c_str(), &st) == -1) {

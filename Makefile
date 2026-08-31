@@ -29,7 +29,7 @@ valgrind: $(NAME)
 ifeq ($(OS), Linux)
 	valgrind --leak-check=full --show-leak-kinds=all --track-fds=yes ./$(NAME)
 else
-	printf "OS: $(OS) is not supported by valgrind\n"
+	@printf "OS: $(OS) is not supported by valgrind\n"
 endif
 
 fclean: clean
