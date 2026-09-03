@@ -1,24 +1,15 @@
-#include "Cgi.hpp"
+#include "CommonGatewayInterface.hpp"
+#include "http/HttpResponse.hpp"
 
-Cgi::Cgi() {}
+CommonGatewayInterface::CommonGatewayInterface() {}
 
-Cgi::Cgi(const Cgi& other) {
-  *this = other;
-}
+CommonGatewayInterface::~CommonGatewayInterface() {}
 
-Cgi& Cgi::operator=(const Cgi& other) {
-  (void)other;
-  return *this;
-}
-
-Cgi::~Cgi() {}
-
-void Cgi::processInput(std::string input) {
+void CommonGatewayInterface::processInput(std::string input) {
   (void)input;
-  // end with calling processInput()
 }
 
-void Cgi::createSubprocess(const std::string& filepath, const std::string& input) {
+std::string CommonGatewayInterface::createSubprocess(const std::string& filepath, const std::string& input) {
   // checks should be done upstream
   pid_t pid;
   int pipefd[2];
@@ -48,9 +39,7 @@ void Cgi::createSubprocess(const std::string& filepath, const std::string& input
     args[2] = NULL;
 
     execve(args[0], args, NULL); // envp useless?
-    // still in child process, execve failed
-    // TODO: properly handle error
-    throw std::runtime_error("Execution of CGI script failed.");
+    throw std::runtime_error("Execution of CommonGatewayInterface script failed.");
   } else {
     // Parent process
     close(pipefd[0]);
@@ -62,12 +51,20 @@ void Cgi::createSubprocess(const std::string& filepath, const std::string& input
     }
     close(pipefd[1]);
 
+    std::string output;
+    char buffer[4096];
+    ssize_t n;
+    while ((n = read(pipefd[0], buffer, sizeof(buffer))) > 0)
+      output.append(buffer, n);
+
     int status;
     if (waitpid(pid, &status, 0) == -1)
-      throw std::runtime_error("Waiting for CGI process failed.");
+      throw std::runtime_error("Waiting for CommonGatewayInterface process failed.");
     if (WIFEXITED(status))
-      std::cout << "CGI script exited with status: " << WEXITSTATUS(status) << std::endl;
+      std::cout << "CommonGatewayInterface script exited with status: " << WEXITSTATUS(status) << std::endl;
     else
-      std::cout << "CGI script did not exit normally." << std::endl;
+      std::cout << "CommonGatewayInterface script did not exit normally." << std::endl;
+
+    return (output);
   }
 }

@@ -7,7 +7,7 @@ project(
 )
 
 sources = files(
-  'src/Cgi.cpp',
+  'src/CommonGatewayInterface.cpp',
   'src/Client.cpp',
   'src/http/HttpRequest.cpp',
   'src/http/HttpResponse.cpp',
