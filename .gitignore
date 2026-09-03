@@ -4,6 +4,8 @@ build
 compile_commands.json
 obj
 
+**/*test*
+
 notes.md
 subject.md
 test.toml
