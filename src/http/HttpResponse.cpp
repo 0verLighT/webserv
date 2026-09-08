@@ -23,10 +23,6 @@ void HttpResponse::sendHttpResponse() {
   size_t sent = 0;
   while (sent < _response.length()) {
     ssize_t result = send(_socket, _response.c_str() + sent, _response.length() - sent, 0);
-    if (result == -1) {
-      Logger::error("Failed to send response");
-      return;
-    }
     sent += result;
   }
 }
