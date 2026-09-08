@@ -1,6 +1,7 @@
 #include "Server.hpp"
 #include "Logger.hpp"
 #include "utils.hpp"
+#include <csignal>
 #include <exception>
 #include <sys/fcntl.h>
 #include <sys/poll.h>
@@ -46,6 +47,7 @@ Server::~Server() {
 // POLLINT -> read request
 // POLLOUT -> write response
 void Server::run() {
+  signal(SIGPIPE, SIG_IGN);
   signal(SIGINT, handlerSignal);
   std::map<int, Client> clients;
   // Catch Crtl + C signal

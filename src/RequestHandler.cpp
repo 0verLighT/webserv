@@ -60,7 +60,8 @@ HttpResponse RequestHandler::handleGet() {
     throw Forbidden(_socket);
   }
   bool autoindex = true;
-  if (_req.getPath()[_req.getPath().size() - 1] == '/' || isDirectory(path)) {
+  Logger::debug("path: " + _req.getPath());
+  if (!_req.getPath().empty() && (_req.getPath()[_req.getPath().size() - 1] == '/' || isDirectory(path))) {
     if (autoindex) {
       std::string autoindexPage = generateAutoindexPage(path);
       if (autoindexPage.empty()) {
