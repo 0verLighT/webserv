@@ -10,5 +10,5 @@ class CommonGatewayInterface {
     CommonGatewayInterface();
     ~CommonGatewayInterface();
     void	processInput(std::string input);
-    std::string	createSubprocess(const std::string& filename, const std::string& args);
+    std::string	createSubprocess(const std::string& filename);
 };
