@@ -6,6 +6,7 @@
 #include "enum/HttpStatus.hpp"
 #include "http/httpUtils.hpp"
 #include <algorithm>
+#include <cctype>
 #include <cerrno>
 #include <cstddef>
 #include <cstdio>
@@ -15,6 +16,7 @@
 #include <fcntl.h>
 #include <iterator>
 #include <unistd.h>
+#include <vector>
 
 RequestHandler::RequestHandler(HttpRequest req, int socket) : _req(req), _socket(socket) {}
 
@@ -127,43 +129,101 @@ HttpResponse RequestHandler::handleDelete() {
   throw NoContent(_socket);
 }
 
-HttpResponse RequestHandler::parseCgiOutput(const std::string& output)
-{
+static std::string trimCgiHeaderValue(const std::string& value) {
+  std::string::size_type first = value.find_first_not_of(" \t\r");
+  if (first == std::string::npos)
+    return "";
+  std::string::size_type last = value.find_last_not_of(" \t\r");
+  return value.substr(first, last - first + 1);
+}
+
+static std::string lowercaseCgiHeader(const std::string& value) {
+  std::string lower(value);
+  for (std::string::size_type i = 0; i < lower.size(); ++i)
+    lower[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(lower[i])));
+  return lower;
+}
+
+static bool parseCgiStatus(const std::string& value, HttpStatus::Code& status) {
+  if (value.size() < 3 || value[0] < 48 || value[0] > 57 ||
+      value[1] < 48 || value[1] > 57 || value[2] < 48 || value[2] > 57 ||
+      (value.size() > 3 && value[3] != 32 && value[3] != 9))
+    return false;
+
+  int code = (value[0] - 48) * 100 + (value[1] - 48) * 10 + value[2] - 48;
+  if (code < 100 || code > 599)
+    return false;
+  status = static_cast<HttpStatus::Code>(code);
+  return true;
+}
+
+static bool isServerOwnedCgiHeader(const std::string& name) {
+  return name == "content-length" || name == "connection" ||
+         name == "keep-alive" || name == "transfer-encoding" ||
+         name == "upgrade" || name == "trailer" || name == "te";
+}
+
+HttpResponse RequestHandler::parseCgiOutput(const std::string& output) {
   std::string::size_type separator = output.find("\r\n\r\n");
   std::string::size_type separatorSize = 4;
 
-  // Python's print() commonly emits LF-only output.
+  // Python print() commonly emits LF-only output.
   if (separator == std::string::npos) {
     separator = output.find("\n\n");
     separatorSize = 2;
   }
-
-  if (separator == std::string::npos) {
-    return HttpResponse(
-      "Invalid CGI response",
-      HttpStatus::BAD_GATEWAY,
-      _socket,
-      "text/plain"
-    );
-  }
+  if (separator == std::string::npos)
+    return HttpResponse("Invalid CGI response", HttpStatus::BAD_GATEWAY, _socket, "text/plain");
 
   std::string headers = output.substr(0, separator);
   std::string body = output.substr(separator + separatorSize);
   std::string contentType = "text/plain";
+  HttpStatus::Code status = HttpStatus::OK;
+  bool hasStatus = false;
+  bool hasLocation = false;
+  std::vector<std::pair<std::string, std::string> > extraHeaders;
 
-  std::string::size_type contentTypePos = headers.find("Content-Type:");
-  if (contentTypePos != std::string::npos) {
-    contentTypePos += std::string("Content-Type:").size();
-    std::string::size_type lineEnd = headers.find('\n', contentTypePos);
-    contentType = headers.substr(contentTypePos, lineEnd - contentTypePos);
+  std::string::size_type lineStart = 0;
+  while (lineStart < headers.size()) {
+    std::string::size_type lineEnd = headers.find("\n", lineStart);
+    if (lineEnd == std::string::npos)
+      lineEnd = headers.size();
+    std::string line = headers.substr(lineStart, lineEnd - lineStart);
+    if (!line.empty() && line[line.size() - 1] == 13)
+      line.erase(line.size() - 1);
 
-    if (!contentType.empty() && contentType[contentType.size() - 1] == '\r')
-      contentType.erase(contentType.size() - 1);
-    while (!contentType.empty() && contentType[0] == ' ')
-      contentType.erase(0, 1);
+    std::string::size_type colon = line.find(":");
+    if (colon == std::string::npos)
+      return HttpResponse("Invalid CGI response header", HttpStatus::BAD_GATEWAY, _socket, "text/plain");
+
+    std::string name = trimCgiHeaderValue(line.substr(0, colon));
+    std::string value = trimCgiHeaderValue(line.substr(colon + 1));
+    if (name.empty() || name.find_first_of(" \t\r\n") != std::string::npos ||
+        value.find_first_of("\r\n") != std::string::npos)
+      return HttpResponse("Invalid CGI response header", HttpStatus::BAD_GATEWAY, _socket, "text/plain");
+
+    std::string lowerName = lowercaseCgiHeader(name);
+    if (lowerName == "content-type")
+      contentType = value;
+    else if (lowerName == "status") {
+      if (!parseCgiStatus(value, status))
+        return HttpResponse("Invalid CGI Status header", HttpStatus::BAD_GATEWAY, _socket, "text/plain");
+      hasStatus = true;
+    } else if (lowerName == "location") {
+      extraHeaders.push_back(std::make_pair(name, value));
+      hasLocation = true;
+    } else if (!isServerOwnedCgiHeader(lowerName)) {
+      // Preserve headers such as Set-Cookie while retaining server framing ownership.
+      extraHeaders.push_back(std::make_pair(name, value));
+    }
+
+    lineStart = lineEnd + 1;
   }
 
-  return HttpResponse(body, HttpStatus::OK, _socket, contentType);
+  // CGI redirects without an explicit Status header default to 302 Found.
+  if (hasLocation && !hasStatus)
+    status = HttpStatus::FOUND;
+  return HttpResponse(body, status, _socket, contentType, extraHeaders);
 }
 
 static const std::map<std::string, std::string>& miniTable() {

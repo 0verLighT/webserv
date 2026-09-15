@@ -3,7 +3,14 @@
 #include "enum/HttpStatus.hpp"
 
 HttpResponse::HttpResponse(std::string _body, HttpStatus::Code _status, int socket, std::string contentType)
-  : _body(_body), _status(_status),  _contentType(contentType), _socket(socket) {
+  : _body(_body), _status(_status), _contentType(contentType), _extraHeaders(), _socket(socket) {
+    _response = serialize();
+}
+
+HttpResponse::HttpResponse(std::string _body, HttpStatus::Code _status, int socket, std::string contentType,
+                           const std::vector<std::pair<std::string, std::string> >& extraHeaders)
+  : _body(_body), _status(_status), _contentType(contentType),
+    _extraHeaders(extraHeaders), _socket(socket) {
     _response = serialize();
 }
 
@@ -13,6 +20,9 @@ std::string HttpResponse::serialize() {
     res << "HTTP/1.1 " << _status << " " << getSentenceResponseHttpStatus(_status) << "\r\n";
     res << "Content-Length: " << _body.length() << "\r\n";
     res << "Content-Type: " << _contentType << "\r\n";
+    for (std::vector<std::pair<std::string, std::string> >::const_iterator it =
+           _extraHeaders.begin(); it != _extraHeaders.end(); ++it)
+      res << it->first << ": " << it->second << "\r\n";
     res << "\r\n";
     res << _body;
     return res.str();

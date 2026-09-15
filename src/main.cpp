@@ -1,6 +1,8 @@
 #include "Server.hpp"
 #include <exception>
 #include <iostream>
+#include "CommonGatewayInterface.hpp"
+#include "TomlParser.hpp"
 
 int main(int argc, char **argv) {
   // until Configuration File aren't aviable
