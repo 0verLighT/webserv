@@ -49,4 +49,6 @@ class RequestHandler {
     HttpResponse handlePost();
     HttpResponse handlePut();
     HttpResponse handleDelete();
+    // Converts raw CGI headers and body into the server-owned HTTP response.
+    HttpResponse parseCgiOutput(const std::string& output);
 };

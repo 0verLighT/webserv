@@ -127,6 +127,45 @@ HttpResponse RequestHandler::handleDelete() {
   throw NoContent(_socket);
 }
 
+HttpResponse RequestHandler::parseCgiOutput(const std::string& output)
+{
+  std::string::size_type separator = output.find("\r\n\r\n");
+  std::string::size_type separatorSize = 4;
+
+  // Python's print() commonly emits LF-only output.
+  if (separator == std::string::npos) {
+    separator = output.find("\n\n");
+    separatorSize = 2;
+  }
+
+  if (separator == std::string::npos) {
+    return HttpResponse(
+      "Invalid CGI response",
+      HttpStatus::BAD_GATEWAY,
+      _socket,
+      "text/plain"
+    );
+  }
+
+  std::string headers = output.substr(0, separator);
+  std::string body = output.substr(separator + separatorSize);
+  std::string contentType = "text/plain";
+
+  std::string::size_type contentTypePos = headers.find("Content-Type:");
+  if (contentTypePos != std::string::npos) {
+    contentTypePos += std::string("Content-Type:").size();
+    std::string::size_type lineEnd = headers.find('\n', contentTypePos);
+    contentType = headers.substr(contentTypePos, lineEnd - contentTypePos);
+
+    if (!contentType.empty() && contentType[contentType.size() - 1] == '\r')
+      contentType.erase(contentType.size() - 1);
+    while (!contentType.empty() && contentType[0] == ' ')
+      contentType.erase(0, 1);
+  }
+
+  return HttpResponse(body, HttpStatus::OK, _socket, contentType);
+}
+
 static const std::map<std::string, std::string>& miniTable() {
   static std::map<std::string, std::string> contentType;
 
