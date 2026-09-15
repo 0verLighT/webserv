@@ -19,6 +19,8 @@ class HttpRequest {
     std::map<std::string, std::string> getHeaders() const;
     std::string getHeader(std::string key) const;
     std::string getPath() const;
+    std::string getQueryString() const;
+    std::string getHttpVersion() const;
     std::map<std::string, std::string> parseHeaders(std::string req) const;
     HttpMethod::Code parseMethod(std::string req) const;
     std::string parsePathWithQueries(std::string req);
@@ -37,5 +39,6 @@ class HttpRequest {
     std::map<std::string, std::string> _headers;
     std::string _body;
     std::string _httpVersion;
+    std::string _queryString;
     std::map<std::string, std::string> _queries;
 };

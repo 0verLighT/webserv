@@ -12,7 +12,7 @@
 #include "enum/HttpMethod.hpp"
 
 
-HttpRequest::HttpRequest() : _method(HttpMethod::UNKNOWN), _headers(), _body() {
+HttpRequest::HttpRequest() : _method(HttpMethod::UNKNOWN), _headers(), _body(), _queryString() {
   _methodMap["GET"] = HttpMethod::GET;
   _methodMap["POST"] = HttpMethod::POST;
   _methodMap["DELETE"] = HttpMethod::DELETE;
@@ -116,6 +116,7 @@ std::string HttpRequest::parsePathWithQueries(std::string req) {
     if (hasQueries != std::string::npos) {
       Logger::info("Query detected");
       path = decoded.substr(0, hasQueries);
+      _queryString = pathWithQueries.substr(pathWithQueries.find("?") + 1);
       _queries = parseQueries(decoded, hasQueries);
       }
       return path.empty() ? decoded : path;
@@ -167,6 +168,14 @@ HttpMethod::Code HttpRequest::getMethod() const {
 
 std::string HttpRequest::getPath() const {
   return _path;
+}
+
+std::string HttpRequest::getQueryString() const {
+  return _queryString;
+}
+
+std::string HttpRequest::getHttpVersion() const {
+  return _httpVersion;
 }
 
 std::map<std::string, std::string> HttpRequest::getHeaders() const {
