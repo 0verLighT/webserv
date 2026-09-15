@@ -29,12 +29,12 @@ void HttpRequest::parseRequest(std::string buffer) {
 
   size_t headerEnd = buffer.find("\r\n");
   if (headerEnd != std::string::npos) {
-    std::string fristLine = buffer.substr(0, headerEnd);
-    Logger::info(fristLine);
+    std::string firstLine = buffer.substr(0, headerEnd);
+    Logger::info(firstLine);
 
-    _httpVersion = parseHttpVersion(fristLine);
-    _method = parseMethod(fristLine);
-    _path = parsePathWithQueries(fristLine);
+    _httpVersion = parseHttpVersion(firstLine);
+    _method = parseMethod(firstLine);
+    _path = parsePathWithQueries(firstLine);
     _headers = parseHeaders(buffer.substr(headerEnd + 2));
   }
 }
@@ -127,7 +127,7 @@ std::string HttpRequest::parsePathWithQueries(std::string req) {
 
 std::map<std::string, std::string> HttpRequest::parseQueries(std::string decoded, size_t hasQueries) const {
   std::map<std::string, std::string>queriesMap;
-  
+
   size_t start = 0;
   std::string queries = decoded.substr(hasQueries + 1);
   while (start <= queries.length()) {

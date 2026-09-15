@@ -80,7 +80,7 @@ HttpResponse RequestHandler::handleGet() {
     Logger::debug("File not found: " + path);
     throw NotFound(_socket);
   }
-  
+
   std::ifstream file(path.c_str());
 
   if (!file.is_open()) {
@@ -221,7 +221,7 @@ static const std::map<std::string, std::string>& miniTable() {
 const std::string& RequestHandler::getContentTypeOfPath(std::string path) const {
   Logger::debug(path);
   static const std::string defaultType = "application/octet-stream";
-  std::string ext = getExtenstionFormPath(path);
+  std::string ext = getExtensionFromPath(path);
   if (ext.empty())
     return defaultType;
   const std::map<std::string, std::string>& contentType = miniTable();
