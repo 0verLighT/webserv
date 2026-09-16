@@ -6,7 +6,7 @@ const std::string getExtensionFromPath(const std::string &path) {
   size_t sepPos = path.find_last_of("/\\");
   if (dotPos != std::string::npos && (sepPos == std::string::npos || dotPos > sepPos)) {
     std::string ext = path.substr(dotPos);
-    Logger::debug(ext);
+    // Logger::debug(ext);
     return ext;
   }
 

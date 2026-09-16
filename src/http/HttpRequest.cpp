@@ -30,7 +30,7 @@ void HttpRequest::parseRequest(std::string buffer) {
   size_t headerEnd = buffer.find("\r\n");
   if (headerEnd != std::string::npos) {
     std::string firstLine = buffer.substr(0, headerEnd);
-    Logger::info(firstLine);
+    // Logger::info(firstLine);
 
     _httpVersion = parseHttpVersion(firstLine);
     _method = parseMethod(firstLine);
@@ -114,7 +114,7 @@ std::string HttpRequest::parsePathWithQueries(std::string req) {
     }
     size_t hasQueries = decoded.find("?");
     if (hasQueries != std::string::npos) {
-      Logger::info("Query detected");
+    //   Logger::info("Query detected");
       path = decoded.substr(0, hasQueries);
       _queryString = pathWithQueries.substr(pathWithQueries.find("?") + 1);
       _queries = parseQueries(decoded, hasQueries);

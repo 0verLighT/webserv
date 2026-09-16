@@ -99,7 +99,7 @@ HttpResponse RequestHandler::handleGet() {
     }
 
     // Existing static-file logic
-  Logger::info(path);
+//   Logger::info(path);
   if (_req.getPath().find("..") != std::string::npos) {
     throw Forbidden(_socket);
   }
@@ -221,8 +221,10 @@ HttpResponse RequestHandler::parseCgiOutput(const std::string& output) {
     separator = output.find("\n\n");
     separatorSize = 2;
   }
-  if (separator == std::string::npos)
-    return HttpResponse("Invalid CGI response", HttpStatus::BAD_GATEWAY, _socket, "text/plain");
+    if (separator == std::string::npos) {
+      // Body-only CGI scripts use the server's default response metadata.
+      return HttpResponse(output, HttpStatus::OK, _socket, "text/plain");
+    }
 
   std::string headers = output.substr(0, separator);
   std::string body = output.substr(separator + separatorSize);
