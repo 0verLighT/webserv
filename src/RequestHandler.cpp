@@ -1,3 +1,4 @@
+#include "CommonGatewayInterface.hpp"
 #include "http/HttpRequest.hpp"
 #include "http/HttpResponse.hpp"
 #include "enum/HttpMethod.hpp"
@@ -6,6 +7,7 @@
 #include "enum/HttpStatus.hpp"
 #include "http/httpUtils.hpp"
 #include <algorithm>
+#include <cctype>
 #include <cerrno>
 #include <cstddef>
 #include <cstdio>
@@ -14,7 +16,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <iterator>
+#include <limits.h>
 #include <unistd.h>
+#include <vector>
 
 RequestHandler::RequestHandler(HttpRequest req, int socket) : _req(req), _socket(socket) {}
 
@@ -52,10 +56,50 @@ bool RequestHandler::isDirectory(std::string path) const {
   }
   return S_ISDIR(st.st_mode);
 }
+// Create an absolute path from input
+std::string RequestHandler::resolvePath(const std::string& requestPath) const {
+  if (requestPath.empty() || requestPath[0] != '/' ||
+      requestPath.find("..") != std::string::npos)
+    throw Forbidden(_socket);
+
+  char currentDirectory[PATH_MAX];
+  if (getcwd(currentDirectory, sizeof(currentDirectory)) == NULL)
+    throw InternalServerError(_socket);
+
+  return std::string(currentDirectory) + "/html" + requestPath;
+}
+
+// Check for call to CGI
+bool RequestHandler::isCgi(const std::string& path) const {
+  std::string extension = getExtensionFromPath(path);
+  if (extension != ".py" && extension != ".sh")
+    return false;
+
+  struct stat st;
+  return stat(path.c_str(), &st) == 0 && S_ISREG(st.st_mode) &&
+         access(path.c_str(), X_OK) == 0;
+}
 
 HttpResponse RequestHandler::handleGet() {
-  std::string path = "./html" + _req.getPath();
-  Logger::info(path);
+    std::string path = resolvePath(_req.getPath());
+
+    if (isCgi(path)) {
+        CommonGatewayInterface cgi;
+
+        cgi.processInput(
+            _req,
+            path,
+            _req.getPath(),
+            "localhost",
+            "8080"
+        );
+
+        std::string rawOutput = cgi.createSubprocess();
+        return parseCgiOutput(rawOutput);
+    }
+
+    // Existing static-file logic
+//   Logger::info(path);
   if (_req.getPath().find("..") != std::string::npos) {
     throw Forbidden(_socket);
   }
@@ -81,7 +125,7 @@ HttpResponse RequestHandler::handleGet() {
     Logger::debug("File not found: " + path);
     throw NotFound(_socket);
   }
-  
+
   std::ifstream file(path.c_str());
 
   if (!file.is_open()) {
@@ -95,8 +139,15 @@ HttpResponse RequestHandler::handleGet() {
 }
 
 HttpResponse RequestHandler::handlePost() {
-  Logger::debug("Handling POST " + _req.getPath());
-  return HttpResponse("", HttpStatus::CREATED, _socket, "text/plain");
+    std::string path = resolvePath(_req.getPath());
+
+    if (isCgi(path)) {
+        CommonGatewayInterface cgi;
+        cgi.processInput(_req, path, _req.getPath(), "localhost", "8080");
+        return parseCgiOutput(cgi.createSubprocess());
+    }
+
+    return HttpResponse("", HttpStatus::CREATED, _socket, "text/plain");
 }
 
 HttpResponse RequestHandler::handlePut() {
@@ -126,6 +177,105 @@ HttpResponse RequestHandler::handleDelete() {
   }
 
   throw NoContent(_socket);
+}
+
+static std::string trimCgiHeaderValue(const std::string& value) {
+  std::string::size_type first = value.find_first_not_of(" \t\r");
+  if (first == std::string::npos)
+    return "";
+  std::string::size_type last = value.find_last_not_of(" \t\r");
+  return value.substr(first, last - first + 1);
+}
+
+static std::string lowercaseCgiHeader(const std::string& value) {
+  std::string lower(value);
+  for (std::string::size_type i = 0; i < lower.size(); ++i)
+    lower[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(lower[i])));
+  return lower;
+}
+
+static bool parseCgiStatus(const std::string& value, HttpStatus::Code& status) {
+  if (value.size() < 3 || value[0] < 48 || value[0] > 57 ||
+      value[1] < 48 || value[1] > 57 || value[2] < 48 || value[2] > 57 ||
+      (value.size() > 3 && value[3] != 32 && value[3] != 9))
+    return false;
+
+  int code = (value[0] - 48) * 100 + (value[1] - 48) * 10 + value[2] - 48;
+  if (code < 100 || code > 599)
+    return false;
+  status = static_cast<HttpStatus::Code>(code);
+  return true;
+}
+
+static bool isServerOwnedCgiHeader(const std::string& name) {
+  return name == "content-length" || name == "connection" ||
+         name == "keep-alive" || name == "transfer-encoding" ||
+         name == "upgrade" || name == "trailer" || name == "te";
+}
+
+HttpResponse RequestHandler::parseCgiOutput(const std::string& output) {
+  std::string::size_type separator = output.find("\r\n\r\n");
+  std::string::size_type separatorSize = 4;
+
+  // Python print() commonly emits LF-only output.
+  if (separator == std::string::npos) {
+    separator = output.find("\n\n");
+    separatorSize = 2;
+  }
+    if (separator == std::string::npos) {
+      // Body-only CGI scripts use the server's default response metadata.
+      return HttpResponse(output, HttpStatus::OK, _socket, "text/plain");
+    }
+
+  std::string headers = output.substr(0, separator);
+  std::string body = output.substr(separator + separatorSize);
+  std::string contentType = "text/plain";
+  HttpStatus::Code status = HttpStatus::OK;
+  bool hasStatus = false;
+  bool hasLocation = false;
+  std::vector<std::pair<std::string, std::string> > extraHeaders;
+
+  std::string::size_type lineStart = 0;
+  while (lineStart < headers.size()) {
+    std::string::size_type lineEnd = headers.find("\n", lineStart);
+    if (lineEnd == std::string::npos)
+      lineEnd = headers.size();
+    std::string line = headers.substr(lineStart, lineEnd - lineStart);
+    if (!line.empty() && line[line.size() - 1] == 13)
+      line.erase(line.size() - 1);
+
+    std::string::size_type colon = line.find(":");
+    if (colon == std::string::npos)
+      return HttpResponse("Invalid CGI response header", HttpStatus::BAD_GATEWAY, _socket, "text/plain");
+
+    std::string name = trimCgiHeaderValue(line.substr(0, colon));
+    std::string value = trimCgiHeaderValue(line.substr(colon + 1));
+    if (name.empty() || name.find_first_of(" \t\r\n") != std::string::npos ||
+        value.find_first_of("\r\n") != std::string::npos)
+      return HttpResponse("Invalid CGI response header", HttpStatus::BAD_GATEWAY, _socket, "text/plain");
+
+    std::string lowerName = lowercaseCgiHeader(name);
+    if (lowerName == "content-type")
+      contentType = value;
+    else if (lowerName == "status") {
+      if (!parseCgiStatus(value, status))
+        return HttpResponse("Invalid CGI Status header", HttpStatus::BAD_GATEWAY, _socket, "text/plain");
+      hasStatus = true;
+    } else if (lowerName == "location") {
+      extraHeaders.push_back(std::make_pair(name, value));
+      hasLocation = true;
+    } else if (!isServerOwnedCgiHeader(lowerName)) {
+      // Preserve headers such as Set-Cookie while retaining server framing ownership.
+      extraHeaders.push_back(std::make_pair(name, value));
+    }
+
+    lineStart = lineEnd + 1;
+  }
+
+  // CGI redirects without an explicit Status header default to 302 Found.
+  if (hasLocation && !hasStatus)
+    status = HttpStatus::FOUND;
+  return HttpResponse(body, status, _socket, contentType, extraHeaders);
 }
 
 static const std::map<std::string, std::string>& miniTable() {
@@ -222,7 +372,7 @@ static const std::map<std::string, std::string>& miniTable() {
 const std::string& RequestHandler::getContentTypeOfPath(std::string path) const {
   Logger::debug(path);
   static const std::string defaultType = "application/octet-stream";
-  std::string ext = getExtenstionFormPath(path);
+  std::string ext = getExtensionFromPath(path);
   if (ext.empty())
     return defaultType;
   const std::map<std::string, std::string>& contentType = miniTable();

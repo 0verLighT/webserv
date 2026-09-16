@@ -1,0 +1,45 @@
+#pragma once
+
+# include <iostream>
+# include <sys/types.h>
+# include <sys/wait.h>
+# include <unistd.h>
+# include <map>
+# include <string>
+# include <vector>
+
+# include "http/HttpRequest.hpp"
+
+class CommonGatewayInterface {
+  private:
+    // Absolute path to the resolved CGI script passed to execve().
+    std::string _scriptPath;
+    // Directory made current in the child so the script can use relative paths.
+    std::string _workingDirectory;
+    // Decoded HTTP request body written to the CGI process standard input.
+    std::string _body;
+    // CGI NAME=value entries; converted to the envp array required by execve().
+    std::vector<std::string> _environment;
+
+    // Adds one NAME=value CGI environment entry to _environment.
+    void addEnvironment(const std::string& name, const std::string& value);
+    // Converts the project HTTP method enum into its CGI request-method string.
+    static std::string methodToString(HttpMethod::Code method);
+    // Converts an HTTP header name into its CGI HTTP_HEADER_NAME counterpart.
+    static std::string headerToEnvironmentName(const std::string& header);
+
+  public:
+    // Creates an empty CGI execution context.
+    CommonGatewayInterface();
+    // Releases the CGI execution context.
+    ~CommonGatewayInterface();
+    // Prepares CGI state from a parsed request and the matched script/server context.
+    void processInput(const HttpRequest& request, const std::string& scriptPath,
+                      const std::string& scriptName,
+                      const std::string& serverName,
+                      const std::string& serverPort);
+    // Runs the prepared script and returns its unparsed standard output.
+    std::string createSubprocess();
+    // Runs an executable without HTTP context; retained for the current CLI test path.
+    std::string	createSubprocess(const std::string& filename);
+};

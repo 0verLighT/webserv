@@ -12,7 +12,7 @@
 #include "enum/HttpMethod.hpp"
 
 
-HttpRequest::HttpRequest() : _method(HttpMethod::UNKNOWN), _headers(), _body() {
+HttpRequest::HttpRequest() : _method(HttpMethod::UNKNOWN), _headers(), _body(), _queryString() {
   _methodMap["GET"] = HttpMethod::GET;
   _methodMap["POST"] = HttpMethod::POST;
   _methodMap["DELETE"] = HttpMethod::DELETE;
@@ -29,12 +29,12 @@ void HttpRequest::parseRequest(std::string buffer) {
 
   size_t headerEnd = buffer.find("\r\n");
   if (headerEnd != std::string::npos) {
-    std::string fristLine = buffer.substr(0, headerEnd);
-    Logger::info(fristLine);
+    std::string firstLine = buffer.substr(0, headerEnd);
+    // Logger::info(firstLine);
 
-    _httpVersion = parseHttpVersion(fristLine);
-    _method = parseMethod(fristLine);
-    _path = parsePathWithQueries(fristLine);
+    _httpVersion = parseHttpVersion(firstLine);
+    _method = parseMethod(firstLine);
+    _path = parsePathWithQueries(firstLine);
     _headers = parseHeaders(buffer.substr(headerEnd + 2));
   }
 }
@@ -114,8 +114,9 @@ std::string HttpRequest::parsePathWithQueries(std::string req) {
     }
     size_t hasQueries = decoded.find("?");
     if (hasQueries != std::string::npos) {
-      Logger::info("Query detected");
+    //   Logger::info("Query detected");
       path = decoded.substr(0, hasQueries);
+      _queryString = pathWithQueries.substr(pathWithQueries.find("?") + 1);
       _queries = parseQueries(decoded, hasQueries);
       }
       return path.empty() ? decoded : path;
@@ -126,7 +127,7 @@ std::string HttpRequest::parsePathWithQueries(std::string req) {
 
 std::map<std::string, std::string> HttpRequest::parseQueries(std::string decoded, size_t hasQueries) const {
   std::map<std::string, std::string>queriesMap;
-  
+
   size_t start = 0;
   std::string queries = decoded.substr(hasQueries + 1);
   while (start <= queries.length()) {
@@ -167,6 +168,14 @@ HttpMethod::Code HttpRequest::getMethod() const {
 
 std::string HttpRequest::getPath() const {
   return _path;
+}
+
+std::string HttpRequest::getQueryString() const {
+  return _queryString;
+}
+
+std::string HttpRequest::getHttpVersion() const {
+  return _httpVersion;
 }
 
 std::map<std::string, std::string> HttpRequest::getHeaders() const {
