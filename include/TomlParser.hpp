@@ -8,6 +8,37 @@
 #include <map>
 #include "utils.hpp"
 
+template <typename T>
+struct TomlValueConverter;
+
+template <>
+struct TomlValueConverter<std::string> {
+  static std::string convert(const std::string& value) {
+    return (value);
+  }
+};
+
+template <>
+struct TomlValueConverter<int> {
+  static int convert(const std::string& value) {
+    return (toInt(value));
+  }
+};
+
+template <>
+struct TomlValueConverter<float> {
+  static float convert(const std::string& value) {
+    return (toFloat(value));
+  }
+};
+
+template <>
+struct TomlValueConverter<bool> {
+  static bool convert(const std::string& value) {
+    return (toBool(value));
+  }
+};
+
 class TomlParser {
   private:
     std::string _input;
@@ -36,7 +67,7 @@ class TomlParser {
       if (it == _data.end())
         throw std::runtime_error("Value not found.");
       try {
-        return convertValue<T>(it->second);
+        return TomlValueConverter<T>::convert(it->second);
       }
       catch (const std::exception& e) {
         throw;
@@ -49,17 +80,6 @@ class TomlParser {
     bool isValidKey(const std::string& key);
     bool isValidValue(const std::string& value);
     bool isDuplicate(const std::string& key);
-
-    template <typename T>
-    T convertValue(const std::string& value) {
-      switch (getType(value)) {
-        case INT: return (toInt(value));
-        case FLOAT: return (toFloat(value));
-        case BOOL: return (toBool(value));
-        case STRING: return (value);
-        default: throw std::runtime_error("Impossible value conversion.");
-      }
-    }
 
     void processInputFile(const std::string filepath);
     void printData(void);

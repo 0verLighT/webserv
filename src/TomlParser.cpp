@@ -56,7 +56,7 @@ bool TomlParser::isValidPair(const std::string& line) {
     throw InvalidFile();
 
   _tmp_key = key;
-  _tmp_value = value;
+  _tmp_value = trim(value, "\"");
   return (true);
 }
 
@@ -132,11 +132,11 @@ const char *TomlParser::DuplicateKey::what(void) const throw() {
 }
 
 const char *TomlParser::InvalidKey::what(void) const throw() {
-  return ("Invalid key format.");
+  return ("Invalid key format in input file.");
 }
 
 const char *TomlParser::InvalidValue::what(void) const throw() {
-  return ("Invalid value format.");
+  return ("Invalid value format in input file.");
 }
 
 
