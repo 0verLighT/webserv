@@ -1,3 +1,4 @@
+#include "CommonGatewayInterface.hpp"
 #include "http/HttpRequest.hpp"
 #include "http/HttpResponse.hpp"
 #include "enum/HttpMethod.hpp"
@@ -15,6 +16,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <iterator>
+#include <limits.h>
 #include <unistd.h>
 #include <vector>
 
@@ -54,9 +56,49 @@ bool RequestHandler::isDirectory(std::string path) const {
   }
   return S_ISDIR(st.st_mode);
 }
+// Create an absolute path from input
+std::string RequestHandler::resolvePath(const std::string& requestPath) const {
+  if (requestPath.empty() || requestPath[0] != '/' ||
+      requestPath.find("..") != std::string::npos)
+    throw Forbidden(_socket);
+
+  char currentDirectory[PATH_MAX];
+  if (getcwd(currentDirectory, sizeof(currentDirectory)) == NULL)
+    throw InternalServerError(_socket);
+
+  return std::string(currentDirectory) + "/html" + requestPath;
+}
+
+// Check for call to CGI
+bool RequestHandler::isCgi(const std::string& path) const {
+  std::string extension = getExtensionFromPath(path);
+  if (extension != ".py" && extension != ".sh")
+    return false;
+
+  struct stat st;
+  return stat(path.c_str(), &st) == 0 && S_ISREG(st.st_mode) &&
+         access(path.c_str(), X_OK) == 0;
+}
 
 HttpResponse RequestHandler::handleGet() {
-  std::string path = "./html" + _req.getPath();
+    std::string path = resolvePath(_req.getPath());
+
+    if (isCgi(path)) {
+        CommonGatewayInterface cgi;
+
+        cgi.processInput(
+            _req,
+            path,
+            _req.getPath(),
+            "localhost",
+            "8080"
+        );
+
+        std::string rawOutput = cgi.createSubprocess();
+        return parseCgiOutput(rawOutput);
+    }
+
+    // Existing static-file logic
   Logger::info(path);
   if (_req.getPath().find("..") != std::string::npos) {
     throw Forbidden(_socket);
@@ -96,8 +138,15 @@ HttpResponse RequestHandler::handleGet() {
 }
 
 HttpResponse RequestHandler::handlePost() {
-  Logger::debug("Handling POST " + _req.getPath());
-  return HttpResponse("", HttpStatus::CREATED, _socket, "text/plain");
+    std::string path = resolvePath(_req.getPath());
+
+    if (isCgi(path)) {
+        CommonGatewayInterface cgi;
+        cgi.processInput(_req, path, _req.getPath(), "localhost", "8080");
+        return parseCgiOutput(cgi.createSubprocess());
+    }
+
+    return HttpResponse("", HttpStatus::CREATED, _socket, "text/plain");
 }
 
 HttpResponse RequestHandler::handlePut() {
