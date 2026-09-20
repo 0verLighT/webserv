@@ -5,6 +5,7 @@
 #include "http/HttpResponse.hpp"
 #include "http/HttpRequest.hpp"
 #include "enum/HttpMethod.hpp"
+#include "Config.hpp"
 #include "utils.hpp"
 #include <fstream>
 #include <unistd.h>
@@ -12,7 +13,7 @@
 
 class RequestHandler {
   public:
-    RequestHandler(HttpRequest req, int socket);
+    RequestHandler(HttpRequest req, int socket, const Config& config);
     void handleMethod();
     ~RequestHandler();
     class Forbidden : public HttpException {
@@ -42,6 +43,7 @@ class RequestHandler {
   private:
     HttpRequest _req;
     int _socket;
+    const Config& _config;
 
     const std::string& getContentTypeOfPath(std::string path) const;
     std::string resolvePath(const std::string& requestPath) const;

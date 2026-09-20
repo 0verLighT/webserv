@@ -15,7 +15,7 @@ void handlerSignal(int sig) {
   Logger::warn("Signal " + to_string(sig) + " received");
 }
 
-Server::Server(int port): _port(port) {
+Server::Server(const Config& config): _port(config.get<int>("port")), _config(config) {
   Logger::info("Server Created");
   _serverAddress.sin_family =  AF_INET;
   _serverAddress.sin_port = htons(_port);
@@ -107,7 +107,9 @@ void Server::run() {
         HttpRequest req;
 
         req.parseRequest(clients[clientSocket].getReqBuffer());
-        RequestHandler handler(req, clientSocket);
+        // Pass the same immutable configuration used to initialize this
+        // server, so request handling never reparses the configuration file.
+        RequestHandler handler(req, clientSocket, _config);
         try {
           handler.handleMethod();
         } catch (const HttpException& e) {

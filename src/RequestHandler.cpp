@@ -20,7 +20,8 @@
 #include <unistd.h>
 #include <vector>
 
-RequestHandler::RequestHandler(HttpRequest req, int socket) : _req(req), _socket(socket) {}
+RequestHandler::RequestHandler(HttpRequest req, int socket, const Config& config)
+  : _req(req), _socket(socket), _config(config) {}
 
 void RequestHandler::handleMethod() {
   HttpResponse res("", HttpStatus::METHOD_NOT_ALLOWED, this->_socket, "text/plain");
