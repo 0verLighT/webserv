@@ -6,13 +6,14 @@
 
 int main(int argc, char **argv) {
   // until Configuration File aren't aviable
-  if (argc != 1) {
-    std::cerr << "Usage" << std::endl;
+  if (argc != 2) {
+    std::cerr << "Usage: ./webserv <path/to/config>" << std::endl;
     return 1;
   }
-  (void)argv;
   try {
-    Server Server(8080);
+    TomlParser p;
+    p.processInputFile(argv[1]);
+    Server Server(p.getValueFromKey<int>("port"));
     Server.run();
   } catch (const std::exception& e) {
     std::cerr << e.what() << std::endl;

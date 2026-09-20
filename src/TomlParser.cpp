@@ -15,6 +15,30 @@ TomlParser::ValueType TomlParser::getType(const std::string& var) {
     return (STRING);
 }
 
+int TomlParser::convertValue(const std::string& value, int*) {
+  if (getType(value) != INT)
+    throw std::runtime_error("Value is not an integer.");
+  return toInt(value);
+}
+
+float TomlParser::convertValue(const std::string& value, float*) {
+  if (getType(value) != FLOAT)
+    throw std::runtime_error("Value is not a float.");
+  return toFloat(value);
+}
+
+bool TomlParser::convertValue(const std::string& value, bool*) {
+  if (getType(value) != BOOL)
+    throw std::runtime_error("Value is not a boolean.");
+  return toBool(value);
+}
+
+std::string TomlParser::convertValue(const std::string& value, std::string*) {
+  if (getType(value) != STRING)
+    throw std::runtime_error("Value is not a string.");
+  return value;
+}
+
 bool TomlParser::isValidLine(const std::string& line) {
   return (isValidPair(line) || isValidTable(line));
 }

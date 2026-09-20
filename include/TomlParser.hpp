@@ -35,12 +35,7 @@ class TomlParser {
       std::map<std::string, std::string>::iterator it = _data.find(key);
       if (it == _data.end())
         throw std::runtime_error("Value not found.");
-      try {
-        return convertValue<T>(it->second);
-      }
-      catch (const std::exception& e) {
-        throw;
-      }
+      return convertValue<T>(it->second);
     }
 
     bool isValidLine(const std::string& line);
@@ -52,14 +47,17 @@ class TomlParser {
 
     template <typename T>
     T convertValue(const std::string& value) {
-      switch (getType(value)) {
-        case INT: return (toInt(value));
-        case FLOAT: return (toFloat(value));
-        case BOOL: return (toBool(value));
-        case STRING: return (value);
-        default: throw std::runtime_error("Impossible value conversion.");
-      }
+      return convertValue(value, static_cast<T*>(0));
     }
+    template <typename T>
+    T convertValue(const std::string& value, T*) {
+      (void)value;
+      throw std::runtime_error("Unsupported conversion type.");
+    }
+    int convertValue(const std::string& value, int*);
+    float convertValue(const std::string& value, float*);
+    bool convertValue(const std::string& value, bool*);
+    std::string convertValue(const std::string& value, std::string*);
 
     void processInputFile(const std::string filepath);
     void printData(void);
