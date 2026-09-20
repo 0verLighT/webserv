@@ -106,13 +106,7 @@ bool RequestHandler::prepareCgi(CommonGatewayInterface& cgi) {
   std::string path = resolvePath(_req.getPath());
   if (!isCgi(path))
     return false;
-  std::string executor;
-  if (_config.has("executor"))
-    executor = configuredValue("executor");
-  std::string serverPort = "";
-  if (_config.has("port"))
-    serverPort = to_string(_config.get<int>("port"));
-  cgi.processInput(_req, path, _req.getPath(), "localhost", serverPort, executor);
+  cgi.processInput(_req, path, _req.getPath(), _config);
   return true;
 }
 

@@ -5,6 +5,15 @@
 #include <fcntl.h>
 #include "Logger.hpp"
 
+static std::string configString(const Config& config, const std::string& key) {
+  if (!config.has(key))
+    return "";
+  std::string value = config.get<std::string>(key);
+  if (value.size() >= 2 && value[0] == '"' && value[value.size() - 1] == '"')
+    value = value.substr(1, value.size() - 2);
+  return value;
+}
+
 CommonGatewayInterface::CommonGatewayInterface()
   : _bodyOffset(0), _pid(-1), _stdinFd(-1), _stdoutFd(-1) {}
 
@@ -45,11 +54,9 @@ std::string CommonGatewayInterface::headerToEnvironmentName(const std::string& h
 void CommonGatewayInterface::processInput(const HttpRequest& request,
                                           const std::string& scriptPath,
                                           const std::string& scriptName,
-                                          const std::string& serverName,
-                                          const std::string& serverPort,
-                                          const std::string& executor) {
+                                          const Config& config) {
   _scriptPath = scriptPath;
-  _executor = executor;
+  _executor = configString(config, "executor");
   _body = request.getBody();
   _bodyOffset = 0;
   _output.clear();
@@ -69,8 +76,12 @@ void CommonGatewayInterface::processInput(const HttpRequest& request,
   addEnvironment("SCRIPT_NAME", scriptName);
   addEnvironment("SCRIPT_FILENAME", scriptPath);
   addEnvironment("SERVER_PROTOCOL", "HTTP/" + request.getHttpVersion());
+  std::string serverName = configString(config, "server_name");
+  if (serverName.empty())
+    serverName = "localhost";
   addEnvironment("SERVER_NAME", serverName);
-  addEnvironment("SERVER_PORT", serverPort);
+  addEnvironment("SERVER_PORT", config.has("port") ?
+    to_string(config.get<int>("port")) : "");
 
   // CONTENT_* variables are special; all other request headers become HTTP_*.
   std::map<std::string, std::string> headers = request.getHeaders();
