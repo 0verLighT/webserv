@@ -4,6 +4,7 @@
 # include <sys/types.h>
 # include <sys/wait.h>
 # include <unistd.h>
+# include <fcntl.h>
 # include <map>
 # include <string>
 # include <vector>
@@ -18,6 +19,11 @@ class CommonGatewayInterface {
     std::string _workingDirectory;
     // Decoded HTTP request body written to the CGI process standard input.
     std::string _body;
+    std::string::size_type _bodyOffset;
+    pid_t _pid;
+    int _stdinFd;
+    int _stdoutFd;
+    std::string _output;
     // CGI NAME=value entries; converted to the envp array required by execve().
     std::vector<std::string> _environment;
 
@@ -39,7 +45,13 @@ class CommonGatewayInterface {
                       const std::string& serverName,
                       const std::string& serverPort);
     // Runs the prepared script and returns its unparsed standard output.
-    std::string createSubprocess();
+    // Starts CGI without waiting; the server drives these operations from poll().
+    void startSubprocess();
+    bool writeInput();
+    bool readOutput();
+    bool isFinished();
+    int getInputFd() const;
+    int getOutputFd() const;
+    std::string getOutput() const;
     // Runs an executable without HTTP context; retained for the current CLI test path.
-    std::string	createSubprocess(const std::string& filename);
 };

@@ -2,9 +2,11 @@
 #include "http/HttpResponse.hpp"
 #include "utils.hpp"
 #include <cerrno>
+#include <fcntl.h>
 #include "Logger.hpp"
 
-CommonGatewayInterface::CommonGatewayInterface() {}
+CommonGatewayInterface::CommonGatewayInterface()
+  : _bodyOffset(0), _pid(-1), _stdinFd(-1), _stdoutFd(-1) {}
 
 CommonGatewayInterface::~CommonGatewayInterface() {}
 
@@ -47,6 +49,8 @@ void CommonGatewayInterface::processInput(const HttpRequest& request,
                                           const std::string& serverPort) {
   _scriptPath = scriptPath;
   _body = request.getBody();
+  _bodyOffset = 0;
+  _output.clear();
   // Do not retain state from a previous request.
   _environment.clear();
 
@@ -83,122 +87,114 @@ void CommonGatewayInterface::processInput(const HttpRequest& request,
     addEnvironment("CONTENT_LENGTH", to_string(_body.size()));
 }
 
-// Retains the original standalone execution path without request-specific CGI data.
-std::string CommonGatewayInterface::createSubprocess(const std::string& filepath) {
-  _scriptPath = filepath;
-  _body.clear();
-  _environment.clear();
-  _workingDirectory = ".";
-  return createSubprocess();
-}
-
-// Forks the prepared CGI process and collects its raw stdout for response parsing.
-std::string CommonGatewayInterface::createSubprocess() {
+void CommonGatewayInterface::startSubprocess() {
   if (_scriptPath.empty())
     throw std::runtime_error("CGI script path is empty.");
-  pid_t pid;
   int stdinPipe[2];
   int stdoutPipe[2];
-
   if (pipe(stdinPipe) == -1 || pipe(stdoutPipe) == -1)
     throw std::runtime_error("CGI pipe creation failed.");
 
-  pid = fork();
-  if (pid == -1) {
-    close(stdinPipe[0]);
-    close(stdinPipe[1]);
-    close(stdoutPipe[0]);
-    close(stdoutPipe[1]);
+  _pid = fork();
+  if (_pid == -1) {
+    close(stdinPipe[0]); close(stdinPipe[1]);
+    close(stdoutPipe[0]); close(stdoutPipe[1]);
     throw std::runtime_error("CGI forking process failed.");
   }
-
-  if (pid == 0) {
-    // Child process
+  if (_pid == 0) {
     close(stdinPipe[1]);
-    if (dup2(stdinPipe[0], STDIN_FILENO) == -1) {
-      close(stdinPipe[0]);
-      throw std::runtime_error("CGI stdin redirection failed.");
+    close(stdoutPipe[0]);
+    if (dup2(stdinPipe[0], STDIN_FILENO) == -1 ||
+        dup2(stdoutPipe[1], STDOUT_FILENO) == -1 ||
+        chdir(_workingDirectory.c_str()) == -1) {
+      char *failureArgs[2];
+      failureArgs[0] = const_cast<char *>("/bin/false");
+      failureArgs[1] = NULL;
+	  // Fails on purpose to replace exit()
+      execve(failureArgs[0], failureArgs, NULL);
     }
     close(stdinPipe[0]);
-
-    // redirect child's stdout into the pipe so parent can read it
-    close(stdoutPipe[0]);
-    if (dup2(stdoutPipe[1], STDOUT_FILENO) == -1) {
-      close(stdoutPipe[1]);
-      throw std::runtime_error("CGI stdout redirection failed.");
-    }
     close(stdoutPipe[1]);
 
-    // CGI scripts commonly rely on relative paths.
-	// Logger::debug("_workingDirectory = " + _workingDirectory);
-    if (chdir(_workingDirectory.c_str()) == -1)
-      throw std::runtime_error("CGI working directory change failed.");
-
-    // The script path is argv[0]; interpreter-specific arguments are added later.
     char *args[2];
     args[0] = const_cast<char *>(_scriptPath.c_str());
     args[1] = NULL;
-
-    // execve needs mutable pointers, while the owning strings remain valid until execve.
     std::vector<char *> environment;
     for (std::vector<std::string>::iterator it = _environment.begin();
          it != _environment.end(); ++it)
       environment.push_back(const_cast<char *>(it->c_str()));
     environment.push_back(NULL);
-
     execve(args[0], args, &environment[0]);
-	std::string path = args[0];
-	// Logger::debug("filepath = " + path);
-    throw std::runtime_error("Execution of CommonGatewayInterface script failed.");
-  } else {
-    // Parent process
-    close(stdinPipe[0]);
-    close(stdoutPipe[1]);
-    // Feed the decoded HTTP body to CGI stdin, retrying interrupted writes.
-    std::string::size_type written = 0;
-    while (written < _body.size()) {
-      ssize_t bytesWritten = write(stdinPipe[1], _body.c_str() + written, _body.size() - written);
-      if (bytesWritten == -1) {
-        if (errno == EINTR)
-          continue;
-        close(stdinPipe[1]);
-        close(stdoutPipe[0]);
-        waitpid(pid, NULL, 0);
-        throw std::runtime_error("Writing CGI stdin failed: " + std::string(strerror(errno)));
-      }
-      written += static_cast<std::string::size_type>(bytesWritten);
-    }
-    // CGI expects EOF after the decoded request body.
-    close(stdinPipe[1]);
-
-    // Preserve CGI stdout unchanged; the request handler will parse its headers and body.
-    std::string output;
-    char buffer[4096];
-    ssize_t bytesRead;
-    while ((bytesRead = read(stdoutPipe[0], buffer, sizeof(buffer))) != 0) {
-      if (bytesRead == -1) {
-        if (errno == EINTR)
-          continue;
-        close(stdoutPipe[0]);
-        waitpid(pid, NULL, 0);
-        throw std::runtime_error(
-          "Reading CGI stdout failed: " + std::string(strerror(errno))
-        );
-      }
-      output.append(buffer, bytesRead);
-    }
-
-    close(stdoutPipe[0]);
-
-    int status;
-    if (waitpid(pid, &status, 0) == -1)
-      throw std::runtime_error("Waiting for CommonGatewayInterface process failed.");
-
-    if (WIFEXITED(status))
-      Logger::info("CommonGatewayInterface script exited with status: " + to_string(WEXITSTATUS(status)));
-    else
-      Logger::warn("CommonGatewayInterface script did not exit normally.");
-
-    return (output);
+    char *failureArgs[2];
+    failureArgs[0] = const_cast<char *>("/bin/false");
+    failureArgs[1] = NULL;
+	// Fails on purpose to replace exit()
+    execve(failureArgs[0], failureArgs, NULL);
   }
+
+  close(stdinPipe[0]);
+  close(stdoutPipe[1]);
+  _stdinFd = stdinPipe[1];
+  _stdoutFd = stdoutPipe[0];
+  fcntl(_stdinFd, F_SETFL, O_NONBLOCK);
+  fcntl(_stdoutFd, F_SETFL, O_NONBLOCK);
 }
+
+bool CommonGatewayInterface::writeInput() {
+  if (_stdinFd == -1)
+    return true;
+  while (_bodyOffset < _body.size()) {
+    ssize_t written = write(_stdinFd, _body.c_str() + _bodyOffset,
+                            _body.size() - _bodyOffset);
+    if (written > 0) {
+      _bodyOffset += static_cast<std::string::size_type>(written);
+      continue;
+    }
+    if (written == -1 && errno == EINTR)
+      continue;
+    if (written == -1 && (errno == EAGAIN || errno == EWOULDBLOCK))
+      return false;
+    close(_stdinFd);
+    _stdinFd = -1;
+    return true;
+  }
+  close(_stdinFd);
+  _stdinFd = -1;
+  return true;
+}
+
+bool CommonGatewayInterface::readOutput() {
+  char buffer[4096];
+  bool closed = false;
+  while (_stdoutFd != -1) {
+    ssize_t bytesRead = read(_stdoutFd, buffer, sizeof(buffer));
+    if (bytesRead > 0) {
+      _output.append(buffer, static_cast<std::string::size_type>(bytesRead));
+      continue;
+    }
+    if (bytesRead == -1 && errno == EINTR)
+      continue;
+    if (bytesRead == -1 && (errno == EAGAIN || errno == EWOULDBLOCK))
+      break;
+    close(_stdoutFd);
+    _stdoutFd = -1;
+    closed = true;
+  }
+  return closed;
+}
+
+bool CommonGatewayInterface::isFinished() {
+  int status;
+  if (_pid == -1)
+    return true;
+  pid_t result = waitpid(_pid, &status, WNOHANG);
+  if (result == 0)
+    return false;
+  _pid = -1;
+  if (_stdinFd != -1) { close(_stdinFd); _stdinFd = -1; }
+  return true;
+}
+
+int CommonGatewayInterface::getInputFd() const { return _stdinFd; }
+int CommonGatewayInterface::getOutputFd() const { return _stdoutFd; }
+std::string CommonGatewayInterface::getOutput() const { return _output; }

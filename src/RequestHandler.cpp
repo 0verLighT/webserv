@@ -81,24 +81,20 @@ bool RequestHandler::isCgi(const std::string& path) const {
          access(path.c_str(), X_OK) == 0;
 }
 
+bool RequestHandler::prepareCgi(CommonGatewayInterface& cgi) {
+  std::string path = resolvePath(_req.getPath());
+  if (!isCgi(path))
+    return false;
+  cgi.processInput(_req, path, _req.getPath(), "localhost", "8080");
+  return true;
+}
+
+HttpResponse RequestHandler::handleCgiOutput(const std::string& output) {
+  return parseCgiOutput(output);
+}
+
 HttpResponse RequestHandler::handleGet() {
     std::string path = resolvePath(_req.getPath());
-
-    if (isCgi(path)) {
-        CommonGatewayInterface cgi;
-
-        cgi.processInput(
-            _req,
-            path,
-            _req.getPath(),
-            "localhost",
-            "8080"
-        );
-
-        std::string rawOutput = cgi.createSubprocess();
-        return parseCgiOutput(rawOutput);
-    }
-
     // Existing static-file logic
 //   Logger::info(path);
   if (_req.getPath().find("..") != std::string::npos) {
@@ -140,13 +136,6 @@ HttpResponse RequestHandler::handleGet() {
 
 HttpResponse RequestHandler::handlePost() {
     std::string path = resolvePath(_req.getPath());
-
-    if (isCgi(path)) {
-        CommonGatewayInterface cgi;
-        cgi.processInput(_req, path, _req.getPath(), "localhost", "8080");
-        return parseCgiOutput(cgi.createSubprocess());
-    }
-
     return HttpResponse("", HttpStatus::CREATED, _socket, "text/plain");
 }
 

@@ -6,6 +6,7 @@
 #include "http/HttpRequest.hpp"
 #include "enum/HttpMethod.hpp"
 #include "Config.hpp"
+#include "CommonGatewayInterface.hpp"
 #include "utils.hpp"
 #include <fstream>
 #include <unistd.h>
@@ -15,6 +16,8 @@ class RequestHandler {
   public:
     RequestHandler(HttpRequest req, int socket, const Config& config);
     void handleMethod();
+    bool prepareCgi(CommonGatewayInterface& cgi);
+    HttpResponse handleCgiOutput(const std::string& output);
     ~RequestHandler();
     class Forbidden : public HttpException {
       public:

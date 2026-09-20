@@ -8,9 +8,9 @@
 #include "http/HttpRequest.hpp"
 #include "utils.hpp"
 
-Client::Client() : _socket(-1), _reqBuffer(""), _readToWrite(false) {}
+Client::Client() : _socket(-1), _reqBuffer(""), _readToWrite(false), _cgiPending(false), _cgiResponse(false) {}
 
-Client::Client(int socket) : _socket(socket), _reqBuffer(""), _readToWrite(false) {}
+Client::Client(int socket) : _socket(socket), _reqBuffer(""), _readToWrite(false), _cgiPending(false), _cgiResponse(false) {}
 
 int Client::getSocket() const {
   return _socket;
@@ -53,6 +53,11 @@ bool  Client::getReadTowrite() const {
   return _readToWrite;
 }
 
+bool Client::isCgiPending() const { return _cgiPending; }
+bool Client::hasCgiResponse() const { return _cgiResponse; }
+void Client::startCgi() { _cgi.startSubprocess(); _cgiPending = true; }
+void Client::finishCgi() { _cgiPending = false; _cgiResponse = true; _readToWrite = true; }
+CommonGatewayInterface& Client::getCgi() { return _cgi; }
 
 int Client::closeConnection() {
   return close(_socket);
