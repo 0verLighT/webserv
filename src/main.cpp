@@ -17,7 +17,7 @@ int main(int argc, char **argv) {
     Server Server(config);
     Server.run();
   } catch (const std::exception& e) {
-    std::cerr << e.what() << std::endl;
+    Logger::error(e.what());
   }
   return 0;
 }

@@ -88,6 +88,8 @@ void Server::run() {
       pollFds.push_back(clientFd);
     }
     int timeout = 5000;
+    if (_config.has("timeout"))
+      timeout = _config.get<int>("timeout");
     int ret = poll(&pollFds[0], pollFds.size(), timeout);
     if (ret < 0) {
       Logger::error("poll: " + std::string(strerror(errno)));
