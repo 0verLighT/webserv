@@ -17,7 +17,8 @@ class Client {
     bool hasCgiResponse() const;
     CommonGatewayInterface& getCgi();
     void startCgi();
-    void finishCgi();
+    void finishCgi(bool succeeded);
+    bool cgiSucceeded() const;
     int closeConnection();
     std::string getReqBuffer() const;
     std::string getRemoteAddress() const;
@@ -28,5 +29,6 @@ class Client {
     bool _readToWrite;
     bool _cgiPending;
     bool _cgiResponse;
+    bool _cgiSucceeded;
     CommonGatewayInterface _cgi;
 };

@@ -22,6 +22,9 @@ class CommonGatewayInterface {
     std::string _body;
     std::string::size_type _bodyOffset;
     pid_t _pid;
+    int _exitStatus;
+    bool _finished;
+    bool _succeeded;
     int _stdinFd;
     int _stdoutFd;
     std::string _output;
@@ -51,6 +54,7 @@ class CommonGatewayInterface {
     bool writeInput();
     bool readOutput();
     bool isFinished();
+    bool succeeded() const;
     int getInputFd() const;
     int getOutputFd() const;
     std::string getOutput() const;

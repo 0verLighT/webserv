@@ -117,7 +117,7 @@ void Server::run() {
       }
       if (client->second.getCgi().isFinished() &&
           client->second.getCgi().getOutputFd() == -1)
-        client->second.finishCgi();
+        client->second.finishCgi(client->second.getCgi().succeeded());
     }
 
     for (size_t i = 0; i < pollFds.size(); ++i) {
@@ -167,7 +167,11 @@ void Server::run() {
         bool cgiStarted = false;
         try {
           if (clients[clientSocket].hasCgiResponse()) {
-            handler.handleCgiOutput(clients[clientSocket].getCgi().getOutput()).sendHttpResponse();
+            if (clients[clientSocket].cgiSucceeded())
+              handler.handleCgiOutput(clients[clientSocket].getCgi().getOutput()).sendHttpResponse();
+            else
+              HttpResponse("CGI execution failed", HttpStatus::BAD_GATEWAY,
+                clientSocket, "text/plain").sendHttpResponse();
           } else if (handler.prepareCgi(clients[clientSocket].getCgi())) {
             clients[clientSocket].startCgi();
             cgiStarted = true;

@@ -15,7 +15,8 @@ static std::string configString(const Config& config, const std::string& key) {
 }
 
 CommonGatewayInterface::CommonGatewayInterface()
-  : _bodyOffset(0), _pid(-1), _stdinFd(-1), _stdoutFd(-1) {}
+  : _bodyOffset(0), _pid(-1), _exitStatus(0), _finished(false),
+    _succeeded(false), _stdinFd(-1), _stdoutFd(-1) {}
 
 CommonGatewayInterface::~CommonGatewayInterface() {}
 
@@ -156,6 +157,8 @@ void CommonGatewayInterface::startSubprocess() {
     execve(failureArgs[0], failureArgs, NULL);
   }
 
+  _finished = false;
+  _succeeded = false;
   close(stdinPipe[0]);
   close(stdoutPipe[1]);
   _stdinFd = stdinPipe[1];
@@ -208,15 +211,26 @@ bool CommonGatewayInterface::readOutput() {
 }
 
 bool CommonGatewayInterface::isFinished() {
-  int status;
-  if (_pid == -1)
+  if (_finished)
     return true;
-  pid_t result = waitpid(_pid, &status, WNOHANG);
+  if (_pid == -1)
+    return false;
+  pid_t result = waitpid(_pid, &_exitStatus, WNOHANG);
   if (result == 0)
     return false;
+  if (result == -1) {
+    _succeeded = false;
+  } else {
+    _succeeded = WIFEXITED(_exitStatus) && WEXITSTATUS(_exitStatus) == 0;
+  }
   _pid = -1;
+  _finished = true;
   if (_stdinFd != -1) { close(_stdinFd); _stdinFd = -1; }
   return true;
+}
+
+bool CommonGatewayInterface::succeeded() const {
+  return _finished && _succeeded;
 }
 
 int CommonGatewayInterface::getInputFd() const { return _stdinFd; }
