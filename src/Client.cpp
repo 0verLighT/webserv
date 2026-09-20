@@ -32,13 +32,7 @@ bool Client::readRequest() {
     HttpRequest req;
     req.parseRequest(_reqBuffer);
 
-    std::string res = req.getHeader("content-length");
-    size_t bodyContent = 0;
-    if (!res.empty())
-      bodyContent = (size_t)toInt(res);
-    size_t bodySize = _reqBuffer.size() - (headerEnd + 4);
-
-    if (bodySize >= bodyContent) {
+    if (req.isBodyComplete()) {
       _readToWrite = true;
     }
   }
