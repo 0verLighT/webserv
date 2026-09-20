@@ -54,7 +54,8 @@ std::string CommonGatewayInterface::headerToEnvironmentName(const std::string& h
 void CommonGatewayInterface::processInput(const HttpRequest& request,
                                           const std::string& scriptPath,
                                           const std::string& scriptName,
-                                          const Config& config) {
+                                          const Config& config,
+                                          const std::string& remoteAddress) {
   _scriptPath = scriptPath;
   _executor = configString(config, "executor");
   _body = request.getBody();
@@ -71,10 +72,14 @@ void CommonGatewayInterface::processInput(const HttpRequest& request,
 
   // Required CGI metadata plus the request and matched-server context.
   addEnvironment("GATEWAY_INTERFACE", "CGI/1.1");
+  addEnvironment("SERVER_SOFTWARE", configString(config, "server_software").empty() ? "webserv/1.0" : configString(config, "server_software"));
   addEnvironment("REQUEST_METHOD", methodToString(request.getMethod()));
   addEnvironment("QUERY_STRING", request.getQueryString());
   addEnvironment("SCRIPT_NAME", scriptName);
   addEnvironment("SCRIPT_FILENAME", scriptPath);
+  addEnvironment("PATH_INFO", request.getPath());
+  addEnvironment("REQUEST_URI", request.getPath() +
+    (request.getQueryString().empty() ? "" : "?" + request.getQueryString()));
   addEnvironment("SERVER_PROTOCOL", "HTTP/" + request.getHttpVersion());
   std::string serverName = configString(config, "server_name");
   if (serverName.empty())
@@ -82,6 +87,7 @@ void CommonGatewayInterface::processInput(const HttpRequest& request,
   addEnvironment("SERVER_NAME", serverName);
   addEnvironment("SERVER_PORT", config.has("port") ?
     to_string(config.get<int>("port")) : "");
+  addEnvironment("REMOTE_ADDR", remoteAddress);
 
   // CONTENT_* variables are special; all other request headers become HTTP_*.
   std::map<std::string, std::string> headers = request.getHeaders();

@@ -43,7 +43,8 @@ class CommonGatewayInterface {
     // Prepares CGI state from a parsed request and the matched script/server context.
     void processInput(const HttpRequest& request, const std::string& scriptPath,
                       const std::string& scriptName,
-                      const Config& config);
+                      const Config& config,
+                      const std::string& remoteAddress);
     // Runs the prepared script and returns its unparsed standard output.
     // Starts CGI without waiting; the server drives these operations from poll().
     void startSubprocess();

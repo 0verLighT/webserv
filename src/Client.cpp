@@ -8,9 +8,11 @@
 #include "http/HttpRequest.hpp"
 #include "utils.hpp"
 
-Client::Client() : _socket(-1), _reqBuffer(""), _readToWrite(false), _cgiPending(false), _cgiResponse(false) {}
+Client::Client() : _socket(-1), _remoteAddress("0.0.0.0"), _reqBuffer(""), _readToWrite(false), _cgiPending(false), _cgiResponse(false) {}
 
-Client::Client(int socket) : _socket(socket), _reqBuffer(""), _readToWrite(false), _cgiPending(false), _cgiResponse(false) {}
+Client::Client(int socket, const std::string& remoteAddress) :
+  _socket(socket), _remoteAddress(remoteAddress), _reqBuffer(""),
+  _readToWrite(false), _cgiPending(false), _cgiResponse(false) {}
 
 int Client::getSocket() const {
   return _socket;
@@ -41,6 +43,10 @@ bool Client::readRequest() {
 
 std::string Client::getReqBuffer() const {
   return _reqBuffer;
+}
+
+std::string Client::getRemoteAddress() const {
+  return _remoteAddress;
 }
 
 bool  Client::getReadTowrite() const {

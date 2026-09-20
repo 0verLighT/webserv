@@ -125,13 +125,22 @@ void Server::run() {
         continue;
       if (pollFds[i].revents & POLLIN) {
         if (pollFds[i].fd == _socket) {
-          int newClientFd = accept(_socket, NULL, NULL);
+          sockaddr_in remoteAddress;
+          socklen_t remoteAddressLength = sizeof(remoteAddress);
+          int newClientFd = accept(_socket,
+            reinterpret_cast<sockaddr *>(&remoteAddress), &remoteAddressLength);
           fcntl(newClientFd, F_SETFL, O_NONBLOCK);
           if (newClientFd == -1) {
             Logger::error("accept: " + std::string(strerror(errno)));
             continue;
           }
-          Client newClient(newClientFd);
+          const unsigned char *addressBytes =
+            reinterpret_cast<const unsigned char *>(&remoteAddress.sin_addr.s_addr);
+          std::string remoteAddressText = to_string(static_cast<unsigned int>(addressBytes[0])) + "." +
+            to_string(static_cast<unsigned int>(addressBytes[1])) + "." +
+            to_string(static_cast<unsigned int>(addressBytes[2])) + "." +
+            to_string(static_cast<unsigned int>(addressBytes[3]));
+          Client newClient(newClientFd, remoteAddressText);
           clients[newClientFd] = newClient;
           Logger::info("New client connected: " + to_string(newClientFd));
         } else {
@@ -153,7 +162,8 @@ void Server::run() {
         req.parseRequest(clients[clientSocket].getReqBuffer());
         // Pass the same immutable configuration used to initialize this
         // server, so request handling never reparses the configuration file.
-        RequestHandler handler(req, clientSocket, _config);
+        RequestHandler handler(req, clientSocket, _config,
+          clients[clientSocket].getRemoteAddress());
         bool cgiStarted = false;
         try {
           if (clients[clientSocket].hasCgiResponse()) {

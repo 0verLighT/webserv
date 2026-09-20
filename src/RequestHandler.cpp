@@ -20,8 +20,9 @@
 #include <unistd.h>
 #include <vector>
 
-RequestHandler::RequestHandler(HttpRequest req, int socket, const Config& config)
-  : _req(req), _socket(socket), _config(config) {}
+RequestHandler::RequestHandler(HttpRequest req, int socket, const Config& config,
+                               const std::string& remoteAddress)
+  : _req(req), _socket(socket), _remoteAddress(remoteAddress), _config(config) {}
 
 void RequestHandler::handleMethod() {
   HttpResponse res("", HttpStatus::METHOD_NOT_ALLOWED, this->_socket, "text/plain");
@@ -106,7 +107,7 @@ bool RequestHandler::prepareCgi(CommonGatewayInterface& cgi) {
   std::string path = resolvePath(_req.getPath());
   if (!isCgi(path))
     return false;
-  cgi.processInput(_req, path, _req.getPath(), _config);
+  cgi.processInput(_req, path, _req.getPath(), _config, _remoteAddress);
   return true;
 }
 

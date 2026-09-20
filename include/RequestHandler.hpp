@@ -14,7 +14,8 @@
 
 class RequestHandler {
   public:
-    RequestHandler(HttpRequest req, int socket, const Config& config);
+    RequestHandler(HttpRequest req, int socket, const Config& config,
+             const std::string& remoteAddress = "0.0.0.0");
     void handleMethod();
     bool prepareCgi(CommonGatewayInterface& cgi);
     HttpResponse handleCgiOutput(const std::string& output);
@@ -46,6 +47,7 @@ class RequestHandler {
   private:
     HttpRequest _req;
     int _socket;
+    std::string _remoteAddress;
     const Config& _config;
 
     const std::string& getContentTypeOfPath(std::string path) const;

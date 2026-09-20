@@ -8,7 +8,7 @@
 class Client {
   public:
     Client();
-    Client(int _socket);
+    Client(int _socket, const std::string& remoteAddress = "0.0.0.0");
     ~Client();
     bool readRequest();
     int getSocket() const;
@@ -20,8 +20,10 @@ class Client {
     void finishCgi();
     int closeConnection();
     std::string getReqBuffer() const;
+    std::string getRemoteAddress() const;
   private:
     int _socket;
+    std::string _remoteAddress;
     std::string _reqBuffer;
     bool _readToWrite;
     bool _cgiPending;
