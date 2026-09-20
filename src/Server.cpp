@@ -108,13 +108,13 @@ void Server::run() {
       int inputFd = client->second.getCgi().getInputFd();
       int outputFd = client->second.getCgi().getOutputFd();
       for (size_t i = 0; i < pollFds.size(); ++i) {
-        if (pollFds[i].fd == inputFd && (pollFds[i].revents & POLLOUT))
+        if (pollFds[i].fd == inputFd &&
+            (pollFds[i].revents & (POLLOUT | POLLERR | POLLHUP)))
           client->second.getCgi().writeInput();
         if (pollFds[i].fd == outputFd &&
             (pollFds[i].revents & (POLLIN | POLLHUP | POLLERR)))
           client->second.getCgi().readOutput();
       }
-      client->second.getCgi().readOutput();
       if (client->second.getCgi().isFinished() &&
           client->second.getCgi().getOutputFd() == -1)
         client->second.finishCgi();
