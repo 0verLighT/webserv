@@ -7,6 +7,8 @@
 #include <iostream>
 #include <limits>
 #include <cmath>
+#include "sys/stat.h"
+#include <cstring>
 
 bool	isInt(const std::string& valueString);
 bool	isFloat(const std::string& valueString);

@@ -57,6 +57,7 @@ bool RequestHandler::isDirectory(std::string path) const {
   }
   return S_ISDIR(st.st_mode);
 }
+
 // Create an absolute path from input
 std::string RequestHandler::resolvePath(const std::string& requestPath) const {
   if (requestPath.empty() || requestPath[0] != '/' ||
