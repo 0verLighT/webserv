@@ -62,6 +62,8 @@ class TomlParser {
     void processInputFile(const std::string filepath);
     void printData(void);
 
+    const std::map<std::string, std::string>& getData(void) const;
+
     class InvalidFile: public TomlParserException {
       virtual const char *what(void) const throw();
     };

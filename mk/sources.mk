@@ -1,6 +1,7 @@
 SOURCES = \
 	src/CommonGatewayInterface.cpp \
 	src/Client.cpp \
+	src/Config.cpp \
 	src/Logger.cpp \
 	src/http/HttpRequest.cpp \
 	src/http/HttpResponse.cpp \

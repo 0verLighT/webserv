@@ -15,6 +15,10 @@ TomlParser::ValueType TomlParser::getType(const std::string& var) {
     return (STRING);
 }
 
+const std::map<std::string, std::string>& TomlParser::getData(void) const {
+  return _data;
+}
+
 int TomlParser::convertValue(const std::string& value, int*) {
   if (getType(value) != INT)
     throw std::runtime_error("Value is not an integer.");
