@@ -73,20 +73,46 @@ std::string RequestHandler::resolvePath(const std::string& requestPath) const {
 
 // Check for call to CGI
 bool RequestHandler::isCgi(const std::string& path) const {
-  std::string extension = getExtensionFromPath(path);
-  if (extension != ".py" && extension != ".sh")
+  if (_config.has("cgi_enabled") && !_config.get<bool>("cgi_enabled"))
+    return false;
+  if (!_config.has("file"))
+    return false;
+
+  std::string configuredFile = configuredValue("file");
+  char currentDirectory[PATH_MAX];
+  if (getcwd(currentDirectory, sizeof(currentDirectory)) == NULL)
+    throw InternalServerError(_socket);
+  if (configuredFile.empty() || configuredFile[0] != '/')
+    configuredFile = std::string(currentDirectory) + "/" + configuredFile;
+  if (path != configuredFile)
     return false;
 
   struct stat st;
-  return stat(path.c_str(), &st) == 0 && S_ISREG(st.st_mode) &&
-         access(path.c_str(), X_OK) == 0;
+  if (stat(path.c_str(), &st) != 0 || !S_ISREG(st.st_mode))
+    return false;
+  if (_config.has("executor") && !configuredValue("executor").empty())
+    return true;
+  return access(path.c_str(), X_OK) == 0;
+}
+
+std::string RequestHandler::configuredValue(const std::string& key) const {
+  std::string value = _config.get<std::string>(key);
+  if (value.size() >= 2 && value[0] == '"' && value[value.size() - 1] == '"')
+    value = value.substr(1, value.size() - 2);
+  return value;
 }
 
 bool RequestHandler::prepareCgi(CommonGatewayInterface& cgi) {
   std::string path = resolvePath(_req.getPath());
   if (!isCgi(path))
     return false;
-  cgi.processInput(_req, path, _req.getPath(), "localhost", "8080");
+  std::string executor;
+  if (_config.has("executor"))
+    executor = configuredValue("executor");
+  std::string serverPort = "";
+  if (_config.has("port"))
+    serverPort = to_string(_config.get<int>("port"));
+  cgi.processInput(_req, path, _req.getPath(), "localhost", serverPort, executor);
   return true;
 }
 

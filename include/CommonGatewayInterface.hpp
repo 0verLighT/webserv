@@ -15,6 +15,7 @@ class CommonGatewayInterface {
   private:
     // Absolute path to the resolved CGI script passed to execve().
     std::string _scriptPath;
+    std::string _executor;
     // Directory made current in the child so the script can use relative paths.
     std::string _workingDirectory;
     // Decoded HTTP request body written to the CGI process standard input.
@@ -43,7 +44,8 @@ class CommonGatewayInterface {
     void processInput(const HttpRequest& request, const std::string& scriptPath,
                       const std::string& scriptName,
                       const std::string& serverName,
-                      const std::string& serverPort);
+                      const std::string& serverPort,
+                      const std::string& executor);
     // Runs the prepared script and returns its unparsed standard output.
     // Starts CGI without waiting; the server drives these operations from poll().
     void startSubprocess();

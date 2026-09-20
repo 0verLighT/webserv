@@ -46,8 +46,10 @@ void CommonGatewayInterface::processInput(const HttpRequest& request,
                                           const std::string& scriptPath,
                                           const std::string& scriptName,
                                           const std::string& serverName,
-                                          const std::string& serverPort) {
+                                          const std::string& serverPort,
+                                          const std::string& executor) {
   _scriptPath = scriptPath;
+  _executor = executor;
   _body = request.getBody();
   _bodyOffset = 0;
   _output.clear();
@@ -116,15 +118,20 @@ void CommonGatewayInterface::startSubprocess() {
     close(stdinPipe[0]);
     close(stdoutPipe[1]);
 
-    char *args[2];
-    args[0] = const_cast<char *>(_scriptPath.c_str());
-    args[1] = NULL;
+    std::vector<char *> args;
+    if (!_executor.empty()) {
+      args.push_back(const_cast<char *>(_executor.c_str()));
+      args.push_back(const_cast<char *>(_scriptPath.c_str()));
+    } else {
+      args.push_back(const_cast<char *>(_scriptPath.c_str()));
+    }
+    args.push_back(NULL);
     std::vector<char *> environment;
     for (std::vector<std::string>::iterator it = _environment.begin();
          it != _environment.end(); ++it)
       environment.push_back(const_cast<char *>(it->c_str()));
     environment.push_back(NULL);
-    execve(args[0], args, &environment[0]);
+    execve(args[0], &args[0], &environment[0]);
     char *failureArgs[2];
     failureArgs[0] = const_cast<char *>("/bin/false");
     failureArgs[1] = NULL;
