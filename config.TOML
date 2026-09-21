@@ -1,5 +1,0 @@
-port = 8090
-file = "html/assets/test.py"
-executor = "/usr/bin/python3"
-timeout = 20000
-cgi_enabled = true
