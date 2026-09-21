@@ -52,6 +52,7 @@ class RequestHandler {
 
     const std::string& getContentTypeOfPath(std::string path) const;
     std::string resolvePath(const std::string& requestPath) const;
+    std::string resolveConfiguredFile() const;
     bool isCgi(const std::string& path) const;
     std::string configuredValue(const std::string& key) const;
     bool isDirectory(std::string path) const;

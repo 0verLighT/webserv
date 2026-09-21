@@ -65,11 +65,35 @@ std::string RequestHandler::resolvePath(const std::string& requestPath) const {
       requestPath.find("..") != std::string::npos)
     throw Forbidden(_socket);
 
+  if (requestPath == "/" && _config.has("file"))
+    return resolveConfiguredFile();
+
   char currentDirectory[PATH_MAX];
   if (getcwd(currentDirectory, sizeof(currentDirectory)) == NULL)
     throw InternalServerError(_socket);
 
   return std::string(currentDirectory) + "/html" + requestPath;
+}
+
+std::string RequestHandler::resolveConfiguredFile() const {
+  std::string configuredFile = configuredValue("file");
+  if (configuredFile.empty() || configuredFile.find("..") != std::string::npos)
+    throw Forbidden(_socket);
+
+  char currentDirectory[PATH_MAX];
+  if (getcwd(currentDirectory, sizeof(currentDirectory)) == NULL)
+    throw InternalServerError(_socket);
+
+  if (configuredFile[0] != '/')
+    return std::string(currentDirectory) + "/" + configuredFile;
+
+  // Accept a URL-style landing path such as /index.html as well as an absolute filesystem path.
+  // Prefer the document-root interpretation when that file exists.
+  std::string documentRootPath = std::string(currentDirectory) + "/html" + configuredFile;
+  struct stat st;
+  if (stat(documentRootPath.c_str(), &st) == 0)
+    return documentRootPath;
+  return configuredFile;
 }
 
 // Check for call to CGI
@@ -79,12 +103,7 @@ bool RequestHandler::isCgi(const std::string& path) const {
   if (!_config.has("file"))
     return false;
 
-  std::string configuredFile = configuredValue("file");
-  char currentDirectory[PATH_MAX];
-  if (getcwd(currentDirectory, sizeof(currentDirectory)) == NULL)
-    throw InternalServerError(_socket);
-  if (configuredFile.empty() || configuredFile[0] != '/')
-    configuredFile = std::string(currentDirectory) + "/" + configuredFile;
+  std::string configuredFile = resolveConfiguredFile();
   if (path != configuredFile)
     return false;
 
@@ -123,7 +142,7 @@ HttpResponse RequestHandler::handleGet() {
     throw Forbidden(_socket);
   }
   bool autoindex = true;
-  if (_req.getPath()[_req.getPath().size() - 1] == '/' || isDirectory(path)) {
+  if (isDirectory(path)) {
     if (autoindex) {
       std::string autoindexPage = generateAutoindexPage(path);
       if (autoindexPage.empty()) {
