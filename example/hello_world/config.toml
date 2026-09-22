@@ -1,5 +1,5 @@
 port = 8080
-file = "html/assets/scripts/hello_world.sh"
+file = "example/hello_world/hello_world.sh"
 executor = "/usr/bin/bash"
 timeout = 20000
 cgi_enabled = true

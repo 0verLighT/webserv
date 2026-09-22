@@ -1,0 +1,5 @@
+port = 8080
+file = "example/time/time.py"
+executor = "/usr/bin/python"
+timeout = 20000
+cgi_enabled = true
