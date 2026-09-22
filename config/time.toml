@@ -1,5 +1,5 @@
 port = 8080
-file = "html/assets/time.py"
+file = "html/assets/scripts/time.py"
 executor = "/usr/bin/python3"
 timeout = 20000
 cgi_enabled = true
