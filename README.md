@@ -1,6 +1,7 @@
-This project has been created as part of the 42 curriculum by [amartel](https://intra.42.fr/users/amartel), [dnantet](https://intra.42.fr/users/dnantet)
+*This project has been created as part of the 42 curriculum by [amartel](https://intra.42.fr/users/amartel), [dnantet](https://intra.42.fr/users/dnantet)*
 
 # webserv 🌐
+
 503 Service Unavailable
 
 ## Description
@@ -28,37 +29,42 @@ It turns the HTML, CSS, and JavaScript into the webpage the user sees.
 
 The basic lifecycle of this web server is as follow:
 
-```
+```md
 Load configuration
-	|
-	v
+    |
+    v
 Start server
-	|
-	v
+    |
+    v
 Wait for request <---
-	|				|
-	v				|
-Handle request		|
-	|				|
-	v				|
+    |                |
+    v                |
+Handle request       |
+    |                |
+    v                |
 Send response -------
 ```
+
 Here, handling a request can be either displaying a premade `.html` page or executing a script and displaying its output.
 
 ## Instructions
 
 After cloning the repository, run `make` at the project's root then execute with
+
 ```sh
 ./webserv config/<config_file.toml>
 ```
+
 A configuration file can contain the following parameters:
+
 - **port** = *int* -> Which port is the server accessible on.
 - **file** = *string* -> The filepath to access (if it's a html page) or execute (if it's a script).
 - **executor** = *string* -> Filepath to the executor to use with a script. Optional if the script has a valid shebang.
 - **cgi_enabled** = *boolean* -> CGI activation status. Optional, true by default.
 - **timeout** = *int* -> How long the server waits (in milliseconds) before timeout. Optional, 5000 by default.
+- **autoindex** = bool -> display a diretory
 
-Any configuration file must be in `.toml` format. See official documentation [here](https://toml.io/en/). Note that for simplicity's sake, only key-value pairs are used in this project (no tables).
+Any configuration file must be in `.toml` format. See [official documentation](https://toml.io/en/). Note that for simplicity's sake, only key-value pairs are used in this project (no tables).
 
 The server can then be accessed at **localhost:port**, or from any machine connected to the same local network with **host_ip:port**.
 
@@ -70,4 +76,5 @@ The server can then be accessed at **localhost:port**, or from any machine conne
 - HTTP reference: [MDN HTTP messages](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Messages) and [MDN status codes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status).
 
 ### About AI
+
 AI was used for debugging and stress-testing the CGI.
