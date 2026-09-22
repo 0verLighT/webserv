@@ -35,10 +35,6 @@ void RequestHandler::handleMethod() {
       // Logger::debug("POST : " + to_string(this->_req.getMethod()));
       res = handlePost();
       break;
-    case HttpMethod::PUT:
-      // Logger::debug("PUT : " + to_string(this->_req.getMethod()));
-      res = handlePut();
-      break;
     case HttpMethod::DELETE:
       // Logger::debug("DELETE : " + to_string(this->_req.getMethod()));
       res = handleDelete();
@@ -178,11 +174,6 @@ HttpResponse RequestHandler::handleGet() {
 HttpResponse RequestHandler::handlePost() {
     std::string path = resolvePath(_req.getPath());
     return HttpResponse("", HttpStatus::CREATED, _socket, "text/plain");
-}
-
-HttpResponse RequestHandler::handlePut() {
-  Logger::debug("Handling PUT " + _req.getPath());
-  return HttpResponse("Peak", HttpStatus::OK, _socket, "text/plain");
 }
 
 HttpResponse RequestHandler::handleDelete() {

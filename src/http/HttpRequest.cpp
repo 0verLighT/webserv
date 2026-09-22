@@ -78,7 +78,6 @@ HttpRequest::HttpRequest() : _method(HttpMethod::UNKNOWN), _headers(), _body(), 
   _methodMap["GET"] = HttpMethod::GET;
   _methodMap["POST"] = HttpMethod::POST;
   _methodMap["DELETE"] = HttpMethod::DELETE;
-  _methodMap["PUT"] = HttpMethod::PUT;
   _methodMap["UNKNOWN"] = HttpMethod::UNKNOWN;
 }
 

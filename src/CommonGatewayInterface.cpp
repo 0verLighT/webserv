@@ -31,7 +31,6 @@ std::string CommonGatewayInterface::methodToString(HttpMethod::Code method) {
   switch (method) {
     case HttpMethod::GET: return "GET";
     case HttpMethod::POST: return "POST";
-    case HttpMethod::PUT: return "PUT";
     case HttpMethod::DELETE: return "DELETE";
     default: return "";
   }

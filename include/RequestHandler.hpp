@@ -15,7 +15,7 @@
 class RequestHandler {
   public:
     RequestHandler(HttpRequest req, int socket, const Config& config,
-             const std::string& remoteAddress = "0.0.0.0");
+      const std::string& remoteAddress = "0.0.0.0");
     void handleMethod();
     bool prepareCgi(CommonGatewayInterface& cgi);
     HttpResponse handleCgiOutput(const std::string& output);
@@ -58,7 +58,6 @@ class RequestHandler {
     bool isDirectory(std::string path) const;
     HttpResponse handleGet();
     HttpResponse handlePost();
-    HttpResponse handlePut();
     HttpResponse handleDelete();
     // Converts raw CGI headers and body into the server-owned HTTP response.
     HttpResponse parseCgiOutput(const std::string& output);
