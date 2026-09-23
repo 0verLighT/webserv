@@ -56,7 +56,7 @@ bool TomlParser::isValidTable(const std::string& line) {
   size_t ed = line.find(']', op);
 
   if (op == std::string::npos || ed == std::string::npos ||line[ed + 1])
-    throw InvalidFile();
+    return (false);
   return (true);
 }
 
@@ -70,7 +70,7 @@ bool TomlParser::isValidPair(const std::string& line) {
   size_t eqPos = trimmed.find('=');
 
   if (eqPos == std::string::npos)
-    throw InvalidFile();
+    return (false);
 
   key = trimmed.substr(0, eqPos);
   value = trimmed.substr(eqPos + 1);
@@ -81,7 +81,7 @@ bool TomlParser::isValidPair(const std::string& line) {
   value.erase(value.find_last_not_of(" \t") + 1);
 
   if (!(isValidKey(key) && isValidValue(value)))
-    throw InvalidFile();
+    return (false);
 
   _tmp_key = key;
   _tmp_value = value;
@@ -90,10 +90,10 @@ bool TomlParser::isValidPair(const std::string& line) {
 
 bool TomlParser::isValidKey(const std::string& key) {
   if (isDuplicate(key))
-    throw DuplicateKey();
+    return (false);
 
   if (key.empty())
-    throw InvalidKey();
+    return (false);
 
   int qcount = 0;
   for (size_t i = 0; i < key.size(); i++)
@@ -102,14 +102,14 @@ bool TomlParser::isValidKey(const std::string& key) {
       qcount += 1;
   }
   if (qcount > 2 || qcount == 1)
-    throw InvalidKey();
+    return (false);
 
   return (true);
 }
 
 bool TomlParser::isValidValue(const std::string& value) {
   if (value.empty())
-    throw InvalidValue();
+    return (false);
 
   int qcount = 0;
   for (size_t i = 0; i < value.size(); i++)
@@ -118,7 +118,7 @@ bool TomlParser::isValidValue(const std::string& value) {
       qcount += 1;
   }
   if (qcount != 2 && (!(isBool(value) || isInt(value) || isFloat(value))))
-    throw InvalidValue();
+    return (false);
 
   return (true);
 }
@@ -140,6 +140,8 @@ void TomlParser::processInputFile(const std::string filepath) {
       continue;
     if (isValidLine(line))
       _data[_tmp_key] = _tmp_value;
+    else
+      throw InvalidFile();
   }
   file.close();
 }
@@ -166,5 +168,3 @@ const char *TomlParser::InvalidKey::what(void) const throw() {
 const char *TomlParser::InvalidValue::what(void) const throw() {
   return ("Invalid value format.");
 }
-
-

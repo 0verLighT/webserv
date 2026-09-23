@@ -1,12 +1,11 @@
 #pragma once
 
-#include "TomlParserExecption.hpp"
+#include "TomlParserException.hpp"
 #include "utils.hpp"
 #include <iostream>
 #include <sstream>
 #include <fstream>
 #include <map>
-#include "utils.hpp"
 
 class TomlParser {
   private:
