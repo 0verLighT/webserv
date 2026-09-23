@@ -169,9 +169,11 @@ void Server::run() {
           if (clients[clientSocket].hasCgiResponse()) {
             if (clients[clientSocket].cgiSucceeded())
               handler.handleCgiOutput(clients[clientSocket].getCgi().getOutput()).sendHttpResponse();
-            else
+            else {
               HttpResponse("CGI execution failed", HttpStatus::BAD_GATEWAY,
                 clientSocket, "text/plain").sendHttpResponse();
+              Logger::warn("CGI execution failed (502 - Bad Gateway)");
+            }
           } else if (handler.prepareCgi(clients[clientSocket].getCgi())) {
             clients[clientSocket].startCgi();
             cgiStarted = true;
