@@ -93,14 +93,14 @@ std::string RequestHandler::resolveConfiguredFile() const {
 }
 
 // Check for call to CGI
-bool RequestHandler::isCgi(const std::string& path) const {
+bool RequestHandler::isCgi(const std::string& path, bool allowUnconfigured) const {
   if (_config.has("cgi_enabled") && !_config.get<bool>("cgi_enabled"))
     return false;
-  if (!_config.has("file"))
-    return false;
 
-  std::string configuredFile = resolveConfiguredFile();
-  if (path != configuredFile)
+  bool isConfiguredFile = false;
+  if (_config.has("file"))
+    isConfiguredFile = path == resolveConfiguredFile();
+  if (!isConfiguredFile && !allowUnconfigured)
     return false;
 
   struct stat st;
@@ -120,8 +120,15 @@ std::string RequestHandler::configuredValue(const std::string& key) const {
 
 bool RequestHandler::prepareCgi(CommonGatewayInterface& cgi) {
   std::string path = resolvePath(_req.getPath());
-  if (!isCgi(path))
-    return false;
+  if (!isCgi(path)) {
+    char currentDirectory[PATH_MAX];
+    if (getcwd(currentDirectory, sizeof(currentDirectory)) == NULL)
+      throw InternalServerError(_socket);
+    std::string routePath = std::string(currentDirectory) + _req.getPath();
+    if (routePath == path || !isCgi(routePath, true))
+      return false;
+    path = routePath;
+  }
   cgi.processInput(_req, path, _req.getPath(), _config, _remoteAddress);
   return true;
 }
