@@ -12,6 +12,7 @@ class TomlParser {
     std::string _input;
     std::string _tmp_key;
     std::string _tmp_value;
+    std::string _current_table;
     std::map<std::string, std::string>	_data;
 
   public:

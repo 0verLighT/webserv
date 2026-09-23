@@ -22,8 +22,15 @@ class Config {
     template <typename T>
     T get(const std::string& key) const {
       std::map<std::string, std::string>::const_iterator it = _data.find(key);
-      if (it == _data.end())
+      if (it == _data.end()) {
+        for (std::map<std::string, std::string>::const_iterator it2 = _data.begin();
+             it2 != _data.end(); ++it2) {
+          std::string::size_type dotPos = it2->first.rfind('.');
+          if (dotPos != std::string::npos && it2->first.substr(dotPos + 1) == key)
+            return convertValue<T>(it2->second);
+        }
         throw std::runtime_error("Value not found: " + key);
+      }
       return convertValue<T>(it->second);
     }
 

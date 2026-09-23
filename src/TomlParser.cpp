@@ -52,18 +52,32 @@ bool TomlParser::isValidTable(const std::string& line) {
   trimmed.erase(0, trimmed.find_first_not_of(" \t"));
   trimmed.erase(trimmed.find_last_not_of(" \t") + 1);
 
-  size_t op = line.find_first_of('[');
-  size_t ed = line.find(']', op);
+  if (trimmed.empty() || trimmed[0] != '[')
+    return false;
+  size_t closing = trimmed.find(']');
+  if (closing == std::string::npos)
+    return false;
+  if (closing + 1 != trimmed.size())
+    return false;
 
-  if (op == std::string::npos || ed == std::string::npos ||line[ed + 1])
-    return (false);
-  return (true);
+  std::string tableName = trimmed.substr(1, closing - 1);
+  tableName = trim(tableName, " \t");
+  if (tableName.empty())
+    return false;
+
+  _current_table = tableName;
+  _tmp_key = tableName;
+  _tmp_value = "";
+  return true;
 }
 
 bool TomlParser::isValidPair(const std::string& line) {
   std::string trimmed = line;
   trimmed.erase(0, trimmed.find_first_not_of(" \t"));
   trimmed.erase(trimmed.find_last_not_of(" \t") + 1);
+
+  if (trimmed.empty() || trimmed[0] == '[')
+    return false;
 
   std::string key;
   std::string value;
@@ -83,7 +97,7 @@ bool TomlParser::isValidPair(const std::string& line) {
   if (!(isValidKey(key) && isValidValue(value)))
     return (false);
 
-  _tmp_key = key;
+  _tmp_key = _current_table.empty() ? key : _current_table + "." + key;
   _tmp_value = value;
   return (true);
 }
@@ -110,6 +124,9 @@ bool TomlParser::isValidKey(const std::string& key) {
 bool TomlParser::isValidValue(const std::string& value) {
   if (value.empty())
     return (false);
+
+  if (value[0] == '[' && value[value.size() - 1] == ']')
+    return true;
 
   int qcount = 0;
   for (size_t i = 0; i < value.size(); i++)
@@ -138,7 +155,9 @@ void TomlParser::processInputFile(const std::string filepath) {
   {
     if (startsWith(line, "#") || line.empty())
       continue;
-    if (isValidLine(line))
+    if (isValidTable(line))
+      continue;
+    if (isValidPair(line))
       _data[_tmp_key] = _tmp_value;
     else
       throw InvalidFile();
