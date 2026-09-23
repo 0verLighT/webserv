@@ -56,7 +56,7 @@ class RequestHandler {
     bool isCgi(const std::string& path, bool allowUnconfigured = false) const;
     std::string configuredValue(const std::string& key) const;
     bool isDirectory(std::string path) const;
-    HttpResponse handleGet();
+    HttpResponse handleGet(const Config& config);
     HttpResponse handlePost();
     HttpResponse handleDelete();
     // Converts raw CGI headers and body into the server-owned HTTP response.

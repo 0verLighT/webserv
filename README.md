@@ -61,8 +61,8 @@ A configuration file can contain the following parameters:
 - **file** = *string* -> The filepath to access (if it's a html page) or execute (if it's a script).
 - **executor** = *string* -> Filepath to the executor to use with a script.
 - **cgi_enabled** = *boolean* -> CGI activation status. Optional, true by default.
+- **autoindex** = *boolean* -> Enable / disable directory listing. Optional, true by default.
 - **timeout** = *int* -> How long the server waits (in milliseconds) before timeout. Optional, 5000 by default.
-- **autoindex** = bool -> display a diretory
 
 Any configuration file must be in `.toml` format. See [official documentation](https://toml.io/en/). Note that for simplicity's sake, only key-value pairs are used in this project (no tables).
 

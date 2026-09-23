@@ -29,7 +29,7 @@ void RequestHandler::handleMethod() {
   switch (static_cast<int>(this->_req.getMethod())) {
     case HttpMethod::GET :
       // Logger::debug("GET : " + to_string(this->_req.getMethod()));
-      res = handleGet();
+      res = handleGet(this->_config);
       break;
     case HttpMethod::POST:
       // Logger::debug("POST : " + to_string(this->_req.getMethod()));
@@ -138,7 +138,7 @@ HttpResponse RequestHandler::handleCgiOutput(const std::string& output) {
   return parseCgiOutput(output);
 }
 
-HttpResponse RequestHandler::handleGet() {
+HttpResponse RequestHandler::handleGet(const Config& config) {
     std::string path = resolvePath(_req.getPath());
     // Existing static-file logic
 //   Logger::info(path);
@@ -146,6 +146,8 @@ HttpResponse RequestHandler::handleGet() {
     throw Forbidden(_socket);
   }
   bool autoindex = true;
+  if (config.has("autoindex"))
+    autoindex = config.get<bool>("autoindex");
   if (isDirectory(path)) {
     if (autoindex) {
       std::string autoindexPage = generateAutoindexPage(path);
