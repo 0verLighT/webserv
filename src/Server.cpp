@@ -15,7 +15,7 @@ void handlerSignal(int sig) {
   Logger::warn("Signal " + to_string(sig) + " received");
 }
 
-Server::Server(const Config& config): _port(config.get<int>("port")), _config(config) {
+Server::Server(const Config& config): _port(config.server().port), _config(config) {
   Logger::info("Server Created");
   _serverAddress.sin_family =  AF_INET;
   _serverAddress.sin_port = htons(_port);
@@ -87,9 +87,7 @@ void Server::run() {
       }
       pollFds.push_back(clientFd);
     }
-    int timeout = 5000;
-    if (_config.has("timeout"))
-      timeout = _config.get<int>("timeout");
+    int timeout = _config.server().timeout;
     int ret = poll(&pollFds[0], pollFds.size(), timeout);
     if (ret < 0) {
       Logger::error("poll: " + std::string(strerror(errno)));

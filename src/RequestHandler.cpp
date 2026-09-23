@@ -61,14 +61,18 @@ std::string RequestHandler::resolvePath(const std::string& requestPath) const {
       requestPath.find("..") != std::string::npos)
     throw Forbidden(_socket);
 
-  if (requestPath == "/" && _config.has("file"))
+  if (requestPath == "/" && _config.server().file.empty() == false)
     return resolveConfiguredFile();
 
   char currentDirectory[PATH_MAX];
   if (getcwd(currentDirectory, sizeof(currentDirectory)) == NULL)
     throw InternalServerError(_socket);
 
-  std::string documentRootPath = std::string(currentDirectory) + "/html" + requestPath;
+  std::string root = _config.server().root.empty() ? "html" : _config.server().root;
+  if (!_config.routes().empty() && !_config.routes()[0].root.empty())
+    root = _config.routes()[0].root;
+
+  std::string documentRootPath = std::string(currentDirectory) + "/" + root + requestPath;
   struct stat st;
   if (stat(documentRootPath.c_str(), &st) == 0)
     return documentRootPath;
@@ -102,11 +106,11 @@ std::string RequestHandler::resolveConfiguredFile() const {
 
 // Check for call to CGI
 bool RequestHandler::isCgi(const std::string& path, bool allowUnconfigured) const {
-  if (_config.has("cgi_enabled") && !_config.get<bool>("cgi_enabled"))
+  if (!_config.server().cgi_enabled)
     return false;
 
   bool isConfiguredFile = false;
-  if (_config.has("file"))
+  if (!_config.server().file.empty())
     isConfiguredFile = path == resolveConfiguredFile();
   if (!isConfiguredFile && !allowUnconfigured)
     return false;
@@ -114,7 +118,7 @@ bool RequestHandler::isCgi(const std::string& path, bool allowUnconfigured) cons
   struct stat st;
   if (stat(path.c_str(), &st) != 0 || !S_ISREG(st.st_mode))
     return false;
-  if (isConfiguredFile && _config.has("executor") && !configuredValue("executor").empty())
+  if (isConfiguredFile && !_config.server().executor.empty())
     return true;
   return access(path.c_str(), X_OK) == 0;
 }
@@ -145,9 +149,7 @@ HttpResponse RequestHandler::handleGet(const Config& config) {
   if (_req.getPath().find("..") != std::string::npos) {
     throw Forbidden(_socket);
   }
-  bool autoindex = true;
-  if (config.has("autoindex"))
-    autoindex = config.get<bool>("autoindex");
+  bool autoindex = config.server().autoindex;
   if (isDirectory(path)) {
     if (autoindex) {
       std::string autoindexPage = generateAutoindexPage(path);
