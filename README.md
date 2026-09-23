@@ -59,7 +59,7 @@ A configuration file can contain the following parameters:
 
 - **port** = *int* -> Which port is the server accessible on.
 - **file** = *string* -> The filepath to access (if it's a html page) or execute (if it's a script).
-- **executor** = *string* -> Filepath to the executor to use with a script. Optional if the script has a valid shebang.
+- **executor** = *string* -> Filepath to the executor to use with a script.
 - **cgi_enabled** = *boolean* -> CGI activation status. Optional, true by default.
 - **timeout** = *int* -> How long the server waits (in milliseconds) before timeout. Optional, 5000 by default.
 - **autoindex** = bool -> display a diretory
@@ -67,6 +67,28 @@ A configuration file can contain the following parameters:
 Any configuration file must be in `.toml` format. See [official documentation](https://toml.io/en/). Note that for simplicity's sake, only key-value pairs are used in this project (no tables).
 
 The server can then be accessed at **localhost:port**, or from any machine connected to the same local network with **host_ip:port**.
+
+### Direct HTTP methods test
+
+- GET
+
+```sh
+curl -i 'http://localhost:8080/example/get/GETME.md'
+```
+
+- POST
+
+```sh
+curl -i -X POST \
+  -d 'Hello, this is a test' \
+  'http://127.0.0.1:8080/example/post/getenv.py?debug=1'
+```
+
+- DELETE
+
+```sh
+curl -i -X DELETE http://localhost:8080/assets/DELETEME.md
+```
 
 ## Resources
 
