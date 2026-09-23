@@ -55,16 +55,58 @@ After cloning the repository, run `make` at the project's root then execute with
 ./webserv config/<config_file.toml>
 ```
 
-A configuration file can contain the following parameters:
+A configuration file is a TOML document. The server reads a `[server]` table and can also accept nested route settings under `[server.route]`-style sections.
 
-- **port** = *int* -> Which port is the server accessible on.
-- **file** = *string* -> The filepath to access (if it's a html page) or execute (if it's a script).
-- **executor** = *string* -> Filepath to the executor to use with a script.
-- **cgi_enabled** = *boolean* -> CGI activation status. Optional, true by default.
-- **autoindex** = *boolean* -> Enable / disable directory listing. Optional, true by default.
-- **timeout** = *int* -> How long the server waits (in milliseconds) before timeout. Optional, 5000 by default.
+```toml
+[server]
+port = 8080
+host = "0.0.0.0"
+server_name = "localhost"
+file = "example/time/time.py"
+executor = "/usr/bin/python"
+cgi_enabled = true
+autoindex = true
+timeout = 20000
+root = "html"
+default_error_page = "error.html"
+max_body_size = 1048576
 
-Any configuration file must be in `.toml` format. See [official documentation](https://toml.io/en/). Note that for simplicity's sake, only key-value pairs are used in this project (no tables).
+[server.route]
+root = "html"
+methods = ["GET", "POST", "DELETE"]
+autoindex = true
+default_file = "index.html"
+
+```
+
+Supported server-level parameters:
+
+- **port** = *int* -> the port the server listens on.
+- **host** = *string* -> the bind address.
+- **server_name** = *string* -> the default server name.
+- **file** = *string* -> the default file used for startup/default route handling.
+- **executor** = *string* -> the program used to execute CGI scripts.
+- **cgi_enabled** = *boolean* -> enable or disable CGI execution.
+- **autoindex** = *boolean* -> enable or disable directory listing.
+- **timeout** = *int* -> server poll timeout in milliseconds.
+- **root** = *string* -> base document root.
+- **default_error_page** = *string* -> fallback custom error page.
+- **max_body_size** = *int* -> maximum client request body size in bytes.
+
+Supported route-level parameters:
+
+- **root** = *string* -> directory to serve for the route.
+- **methods** = *array of strings* -> accepted HTTP methods.
+- **autoindex** = *boolean* -> enable or disable directory listing for that route.
+- **default_file** = *string* -> file to serve when the route points to a directory.
+- **upload_path** = *string* -> directory where uploaded files are stored.
+- **redirect** = *string* -> redirect target for the route.
+- **cgi_enabled** = *boolean* -> CGI enable/disable for that route.
+- **cgi_extension** = *string* -> file extension to treat as CGI.
+- **default_error_page** = *string* -> route-specific error page.
+- **max_body_size** = *int* -> maximum request size for the route.
+
+Any configuration file must be in `.toml` format. See [official documentation](https://toml.io/en/).
 
 The server can then be accessed at **localhost:port**, or from any machine connected to the same local network with **host_ip:port**.
 
@@ -99,4 +141,7 @@ curl -i -X DELETE http://localhost:8080/assets/DELETEME.md
 
 ### About AI
 
-AI was used for debugging and stress-testing the CGI.
+AI was used for :
+
+- setting up the boring stuff
+- debugging and stress-testing the CGI.

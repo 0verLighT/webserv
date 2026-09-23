@@ -180,7 +180,7 @@ void Server::run() {
           } else
             handler.handleMethod();
         } catch (const HttpException& e) {
-          Logger::error("Httpexecption :" + to_string(e.what()));
+          Logger::error("HttpException :" + to_string(e.what()));
           e.SendExecptionResponse();
         } catch (const std::exception& e) {
           Logger::error("Exception :" + to_string(e.what()));
