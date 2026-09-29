@@ -15,4 +15,3 @@ max_body_size = 1048576
 root = "html"
 methods = ["GET", "POST", "DELETE"]
 autoindex = true
-default_file = "index.html"

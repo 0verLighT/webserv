@@ -20,11 +20,19 @@
 #include <unistd.h>
 #include <vector>
 
+static bool routeMatchesPath(const std::string& routePath, const std::string& requestPath);
+static const Config::RouteConfig* matchRoute(const Config& config, const std::string& requestPath);
+static bool routeAllowsMethod(const Config::RouteConfig& route, HttpMethod::Code method);
+
 RequestHandler::RequestHandler(HttpRequest req, int socket, const Config& config,
                                const std::string& remoteAddress)
   : _req(req), _socket(socket), _remoteAddress(remoteAddress), _config(config) {}
 
 void RequestHandler::handleMethod() {
+  const Config::RouteConfig* route = matchRoute(_config, this->_req.getPath());
+  if (route != NULL && !routeAllowsMethod(*route, this->_req.getMethod()))
+    throw MethodNotAllowed(_socket);
+
   HttpResponse res("", HttpStatus::METHOD_NOT_ALLOWED, this->_socket, "text/plain");
   switch (static_cast<int>(this->_req.getMethod())) {
     case HttpMethod::GET :
@@ -45,6 +53,78 @@ void RequestHandler::handleMethod() {
   res.sendHttpResponse();
 }
 
+static bool routeMatchesPath(const std::string& routePath, const std::string& requestPath) {
+  std::string normalizedRoute = routePath;
+  while (!normalizedRoute.empty() && normalizedRoute[normalizedRoute.size() - 1] == '/')
+    normalizedRoute.erase(normalizedRoute.size() - 1);
+  if (normalizedRoute.empty())
+    normalizedRoute = "/";
+
+  if (normalizedRoute == "/")
+    return true;
+  if (requestPath == normalizedRoute)
+    return true;
+  if (requestPath.compare(0, normalizedRoute.size(), normalizedRoute) == 0 &&
+      requestPath.size() > normalizedRoute.size() &&
+      requestPath[normalizedRoute.size()] == '/')
+    return true;
+  return false;
+}
+
+static const Config::RouteConfig* matchRoute(const Config& config, const std::string& requestPath) {
+  const std::vector<Config::RouteConfig>& routes = config.routes();
+  const Config::RouteConfig* bestMatch = NULL;
+  std::string::size_type bestLength = 0;
+
+  for (std::vector<Config::RouteConfig>::const_iterator it = routes.begin(); it != routes.end(); ++it) {
+    const std::string& routePath = it->path;
+    if (!routeMatchesPath(routePath, requestPath))
+      continue;
+    std::string normalizedRoute = routePath;
+    while (!normalizedRoute.empty() && normalizedRoute[normalizedRoute.size() - 1] == '/')
+      normalizedRoute.erase(normalizedRoute.size() - 1);
+    if (normalizedRoute.empty())
+      normalizedRoute = "/";
+    if (normalizedRoute.size() > bestLength) {
+      bestMatch = &(*it);
+      bestLength = normalizedRoute.size();
+    }
+  }
+
+  if (bestMatch != NULL)
+    return bestMatch;
+  if (!routes.empty())
+    return &routes.front();
+  return NULL;
+}
+
+static bool routeAllowsMethod(const Config::RouteConfig& route, HttpMethod::Code method) {
+  if (route.methods.empty())
+    return true;
+
+  std::string methodName;
+  switch (method) {
+    case HttpMethod::GET:
+      methodName = "GET";
+      break;
+    case HttpMethod::POST:
+      methodName = "POST";
+      break;
+    case HttpMethod::DELETE:
+      methodName = "DELETE";
+      break;
+    default:
+      return false;
+  }
+
+  for (std::vector<std::string>::const_iterator it = route.methods.begin();
+       it != route.methods.end(); ++it) {
+    if (*it == methodName)
+      return true;
+  }
+  return false;
+}
+
 bool RequestHandler::isDirectory(std::string path) const {
   struct stat st;
 
@@ -61,7 +141,9 @@ std::string RequestHandler::resolvePath(const std::string& requestPath) const {
       requestPath.find("..") != std::string::npos)
     throw Forbidden(_socket);
 
-  if (requestPath == "/" && _config.server().file.empty() == false)
+  const Config::RouteConfig* route = matchRoute(_config, requestPath);
+
+  if (requestPath == "/" && _config.server().file.empty() == false && (route == NULL || route->default_file.empty()))
     return resolveConfiguredFile();
 
   char currentDirectory[PATH_MAX];
@@ -69,8 +151,21 @@ std::string RequestHandler::resolvePath(const std::string& requestPath) const {
     throw InternalServerError(_socket);
 
   std::string root = _config.server().root.empty() ? "html" : _config.server().root;
-  if (!_config.routes().empty() && !_config.routes()[0].root.empty())
-    root = _config.routes()[0].root;
+  if (route != NULL && !route->root.empty())
+    root = route->root;
+
+  if (requestPath == "/" && route != NULL && !route->default_file.empty()) {
+    std::string defaultFile = route->default_file;
+    if (defaultFile[0] == '/')
+      return defaultFile;
+    std::string defaultPath = std::string(currentDirectory) + "/" + root;
+    if (!defaultPath.empty() && defaultPath[defaultPath.size() - 1] != '/')
+      defaultPath += "/";
+    defaultPath += defaultFile;
+    struct stat st;
+    if (stat(defaultPath.c_str(), &st) == 0)
+      return defaultPath;
+  }
 
   std::string documentRootPath = std::string(currentDirectory) + "/" + root + requestPath;
   struct stat st;
@@ -149,7 +244,8 @@ HttpResponse RequestHandler::handleGet(const Config& config) {
   if (_req.getPath().find("..") != std::string::npos) {
     throw Forbidden(_socket);
   }
-  bool autoindex = config.server().autoindex;
+  const Config::RouteConfig* route = matchRoute(config, _req.getPath());
+  bool autoindex = route != NULL ? route->autoindex : config.server().autoindex;
   if (isDirectory(path)) {
     if (autoindex) {
       std::string autoindexPage = generateAutoindexPage(path);

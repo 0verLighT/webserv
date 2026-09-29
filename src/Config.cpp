@@ -74,14 +74,23 @@ void Config::parseServerConfig() {
   _server.default_error_page = _data.find("server.default_error_page") != _data.end() ? get<std::string>("server.default_error_page") : (_data.find("default_error_page") != _data.end() ? get<std::string>("default_error_page") : "");
   _server.max_body_size = _data.find("server.max_body_size") != _data.end() ? static_cast<std::size_t>(get<int>("server.max_body_size")) : (_data.find("max_body_size") != _data.end() ? static_cast<std::size_t>(get<int>("max_body_size")) : 1048576);
 
-  if (_server.routes.empty()) {
+  bool hasExplicitRoute = false;
+  for (std::map<std::string, std::string>::const_iterator it = _data.begin();
+       it != _data.end(); ++it) {
+    if (it->first.find("server.route.") == 0) {
+      hasExplicitRoute = true;
+      break;
+    }
+  }
+
+  if (!hasExplicitRoute) {
     RouteConfig rootRoute;
     rootRoute.autoindex = _server.autoindex;
     rootRoute.directory_listing = true;
     rootRoute.cgi_enabled = _server.cgi_enabled;
     rootRoute.path = "/";
     rootRoute.root = _server.root.empty() ? "html" : _server.root;
-    rootRoute.default_file = _server.file;
+    rootRoute.default_file = "";
     rootRoute.upload_path = "";
     rootRoute.redirect = "";
     rootRoute.cgi_extension = "";
@@ -117,7 +126,7 @@ void Config::parseRouteConfig() {
   route.root = rootIt != _data.end() ? stripQuotes(rootIt->second) : (_server.root.empty() ? "html" : _server.root);
   route.autoindex = autoindexIt != _data.end() ? get<bool>("server.route.autoindex") : _server.autoindex;
   route.directory_listing = true;
-  route.default_file = defaultFileIt != _data.end() ? stripQuotes(defaultFileIt->second) : _server.file;
+  route.default_file = defaultFileIt != _data.end() ? stripQuotes(defaultFileIt->second) : "";
   route.upload_path = uploadIt != _data.end() ? stripQuotes(uploadIt->second) : "";
   route.redirect = redirectIt != _data.end() ? stripQuotes(redirectIt->second) : "";
   route.methods = methodsIt != _data.end() ? splitList(methodsIt->second) : std::vector<std::string>();
