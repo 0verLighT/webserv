@@ -44,7 +44,7 @@ std::string getSentenceResponseHttpStatus(HttpStatus::Code status) {
     case HttpStatus::UPGRADE_REQUIRED: return "Upgrade Required";
     case HttpStatus::INTERNAL_SERVER_ERROR: return "Internal Server Error";
     case HttpStatus::BAD_GATEWAY: return "Bad Gateway";
-    case HttpStatus::SERVICE_UNAVIABLE: return "Service Unavailable";
+    case HttpStatus::SERVICE_UNAVAILABLE: return "Service Unavailable";
     case HttpStatus::GATEWAY_TIMEOUT: return "Gateway Timeout";
     case HttpStatus::HTTP_VERSION_NOT_SUPPORTED: return "Http Version Not Supported";
     default: return "Unknown Status";
