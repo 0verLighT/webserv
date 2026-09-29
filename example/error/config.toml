@@ -1,0 +1,6 @@
+[server]
+port = 8080
+default_error_page = "httpError/template/template.html"
+error_page_403 = "example/error/403.html"
+error_page_404 = "example/error/404.html"
+error_page_502 = "example/error/502.html"

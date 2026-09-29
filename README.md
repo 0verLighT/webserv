@@ -90,7 +90,8 @@ Supported server-level parameters:
 - **autoindex** = *boolean* -> enable or disable directory listing.
 - **timeout** = *int* -> server poll timeout in milliseconds.
 - **root** = *string* -> base document root.
-- **default_error_page** = *string* -> fallback custom error page.
+- **default_error_page** = *string* -> fallback custom error page. Optional.
+- **error_page_<status>** = *string* -> custom page for a specific error status, for example `error_page_404 = "example/error/404.html"`. Status-specific pages take precedence over generic defaults.
 - **max_body_size** = *int* -> maximum client request body size in bytes.
 
 Supported route-level parameters:
@@ -103,7 +104,8 @@ Supported route-level parameters:
 - **redirect** = *string* -> redirect target for the route.
 - **cgi_enabled** = *boolean* -> CGI enable/disable for that route.
 - **cgi_extension** = *string* -> file extension to treat as CGI.
-- **default_error_page** = *string* -> route-specific error page.
+- **default_error_page** = *string* -> route-specific error page. Optional.
+- **error_page_<status>** = *string* -> route-specific page for one status, overriding the server mapping for that route.
 - **max_body_size** = *int* -> maximum request size for the route.
 
 Any configuration file must be in `.toml` format. See [official documentation](https://toml.io/en/).

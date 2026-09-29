@@ -16,7 +16,8 @@ class HttpException: public std::exception {
     HttpException(HttpStatus::Code code, int socket);
 
     virtual const char* what() const throw();
-    virtual void SendExecptionResponse() const;
+    HttpStatus::Code statusCode() const;
+    virtual void SendExceptionResponse(const std::string& errorPage = "") const;
 
     virtual ~HttpException() throw();
 };

@@ -61,6 +61,37 @@ const Config::RouteConfig* Config::route(const std::string& path) const {
   return NULL;
 }
 
+std::string Config::errorPage(int status, const std::string& requestPath) const {
+  const RouteConfig* matchedRoute = NULL;
+  std::string::size_type matchedLength = 0;
+  for (std::vector<RouteConfig>::const_iterator it = _server.routes.begin();
+       it != _server.routes.end(); ++it) {
+    std::string routePath = it->path;
+    while (routePath.size() > 1 && routePath[routePath.size() - 1] == '/')
+      routePath.erase(routePath.size() - 1);
+    bool matches = routePath == "/" || requestPath == routePath ||
+      (requestPath.compare(0, routePath.size(), routePath) == 0 &&
+       requestPath.size() > routePath.size() && requestPath[routePath.size()] == '/');
+    if (matches && routePath.size() > matchedLength) {
+      matchedRoute = &(*it);
+      matchedLength = routePath.size();
+    }
+  }
+
+  if (matchedRoute != NULL) {
+    std::map<int, std::string>::const_iterator routeError = matchedRoute->error_pages.find(status);
+    if (routeError != matchedRoute->error_pages.end())
+      return routeError->second;
+  }
+
+  std::map<int, std::string>::const_iterator serverError = _server.error_pages.find(status);
+  if (serverError != _server.error_pages.end())
+    return serverError->second;
+  if (matchedRoute != NULL && !matchedRoute->default_error_page.empty())
+    return matchedRoute->default_error_page;
+  return _server.default_error_page;
+}
+
 void Config::parseServerConfig() {
   _server.autoindex = _data.find("server.autoindex") != _data.end() ? get<bool>("server.autoindex") : (_data.find("autoindex") != _data.end() ? get<bool>("autoindex") : true);
   _server.cgi_enabled = _data.find("server.cgi_enabled") != _data.end() ? get<bool>("server.cgi_enabled") : (_data.find("cgi_enabled") != _data.end() ? get<bool>("cgi_enabled") : true);
@@ -71,8 +102,22 @@ void Config::parseServerConfig() {
   _server.file = _data.find("server.file") != _data.end() ? get<std::string>("server.file") : (_data.find("file") != _data.end() ? get<std::string>("file") : "");
   _server.executor = _data.find("server.executor") != _data.end() ? get<std::string>("server.executor") : (_data.find("executor") != _data.end() ? get<std::string>("executor") : "");
   _server.timeout = _data.find("server.timeout") != _data.end() ? get<int>("server.timeout") : (_data.find("timeout") != _data.end() ? get<int>("timeout") : 5000);
-  _server.default_error_page = _data.find("server.default_error_page") != _data.end() ? get<std::string>("server.default_error_page") : (_data.find("default_error_page") != _data.end() ? get<std::string>("default_error_page") : "");
+  _server.default_error_page = _data.find("server.default_error_page") != _data.end() ? stripQuotes(_data.find("server.default_error_page")->second) : (_data.find("default_error_page") != _data.end() ? stripQuotes(_data.find("default_error_page")->second) : "");
   _server.max_body_size = _data.find("server.max_body_size") != _data.end() ? static_cast<std::size_t>(get<int>("server.max_body_size")) : (_data.find("max_body_size") != _data.end() ? static_cast<std::size_t>(get<int>("max_body_size")) : 1048576);
+
+  const std::string serverPrefix = "server.error_page_";
+  for (std::map<std::string, std::string>::const_iterator it = _data.begin();
+       it != _data.end(); ++it) {
+    if (it->first.compare(0, serverPrefix.size(), serverPrefix) != 0)
+      continue;
+    std::string statusText = it->first.substr(serverPrefix.size());
+    if (!isInt(statusText))
+      throw std::runtime_error("Invalid error page status: " + statusText);
+    int status = toInt(statusText);
+    if (status < 400 || status > 599)
+      throw std::runtime_error("Error page status must be between 400 and 599.");
+    _server.error_pages[status] = stripQuotes(it->second);
+  }
 
   bool hasExplicitRoute = false;
   for (std::map<std::string, std::string>::const_iterator it = _data.begin();
@@ -193,6 +238,15 @@ void Config::parseRouteConfig() {
       route.default_error_page = stripQuotes(it->second);
     else if (setting == "max_body_size")
       route.max_body_size = static_cast<std::size_t>(convertValue<int>(it->second));
+    else if (setting.compare(0, 11, "error_page_") == 0) {
+      std::string statusText = setting.substr(11);
+      if (!isInt(statusText))
+        throw std::runtime_error("Invalid route error page status: " + statusText);
+      int status = toInt(statusText);
+      if (status < 400 || status > 599)
+        throw std::runtime_error("Route error page status must be between 400 and 599.");
+      route.error_pages[status] = stripQuotes(it->second);
+    }
   }
 
   for (std::map<std::string, RouteConfig>::const_iterator it = namedRoutes.begin();

@@ -21,6 +21,7 @@ class Config {
       std::string default_error_page;
       std::size_t max_body_size;
       std::vector<std::string> methods;
+      std::map<int, std::string> error_pages;
 
       RouteConfig()
         : autoindex(true), directory_listing(true), cgi_enabled(true),
@@ -42,6 +43,7 @@ class Config {
       std::string default_error_page;
       std::size_t max_body_size;
       std::vector<RouteConfig> routes;
+      std::map<int, std::string> error_pages;
 
       ServerConfig()
         : port(8080), timeout(5000),
@@ -78,6 +80,7 @@ class Config {
     const ServerConfig& server() const;
     const std::vector<RouteConfig>& routes() const;
     const RouteConfig* route(const std::string& path) const;
+    std::string errorPage(int status, const std::string& requestPath) const;
 
     /** @brief Looks up a key and convert its textual TOML value to the relevant type.
     Supported types are those implemented by TomlParser::convertValue.\

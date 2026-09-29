@@ -171,9 +171,8 @@ void Server::run() {
             if (clients[clientSocket].cgiSucceeded())
               handler.handleCgiOutput(clients[clientSocket].getCgi().getOutput()).sendHttpResponse();
             else {
-              HttpResponse("CGI execution failed", HttpStatus::BAD_GATEWAY,
-                clientSocket, "text/plain").sendHttpResponse();
               Logger::warn("CGI execution failed (502 - Bad Gateway)");
+              throw HttpException(HttpStatus::BAD_GATEWAY, clientSocket);
             }
           } else if (handler.prepareCgi(clients[clientSocket].getCgi())) {
             clients[clientSocket].startCgi();
@@ -182,7 +181,7 @@ void Server::run() {
             handler.handleMethod();
         } catch (const HttpException& e) {
           Logger::error("HttpException :" + to_string(e.what()));
-          e.SendExecptionResponse();
+          e.SendExceptionResponse(_config.errorPage(e.statusCode(), req.getPath()));
         } catch (const std::exception& e) {
           Logger::error("Exception :" + to_string(e.what()));
         }

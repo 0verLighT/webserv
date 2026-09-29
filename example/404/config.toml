@@ -1,3 +1,0 @@
-port = 8080
-file = html/VOID
-error_page = html/404.html
