@@ -115,31 +115,89 @@ void Config::parseRouteConfig() {
   std::map<std::string, std::string>::const_iterator errPageIt = _data.find("server.route.default_error_page");
   std::map<std::string, std::string>::const_iterator maxBodyIt = _data.find("server.route.max_body_size");
 
-  if (rootIt == _data.end() && methodsIt == _data.end() && autoindexIt == _data.end() &&
-      defaultFileIt == _data.end() && uploadIt == _data.end() && redirectIt == _data.end() &&
-      cgiEnabledIt == _data.end() && cgiExtIt == _data.end() && errPageIt == _data.end() &&
-      maxBodyIt == _data.end())
-    return;
-
-  RouteConfig route;
-  route.path = "/";
-  route.root = rootIt != _data.end() ? stripQuotes(rootIt->second) : (_server.root.empty() ? "html" : _server.root);
-  route.autoindex = autoindexIt != _data.end() ? get<bool>("server.route.autoindex") : _server.autoindex;
-  route.directory_listing = true;
-  route.default_file = defaultFileIt != _data.end() ? stripQuotes(defaultFileIt->second) : "";
-  route.upload_path = uploadIt != _data.end() ? stripQuotes(uploadIt->second) : "";
-  route.redirect = redirectIt != _data.end() ? stripQuotes(redirectIt->second) : "";
-  route.methods = methodsIt != _data.end() ? splitList(methodsIt->second) : std::vector<std::string>();
-  if (route.methods.empty()) {
-    route.methods.push_back("GET");
-    route.methods.push_back("POST");
-    route.methods.push_back("DELETE");
+  if (rootIt != _data.end() || methodsIt != _data.end() || autoindexIt != _data.end() ||
+      defaultFileIt != _data.end() || uploadIt != _data.end() || redirectIt != _data.end() ||
+      cgiEnabledIt != _data.end() || cgiExtIt != _data.end() || errPageIt != _data.end() ||
+      maxBodyIt != _data.end()) {
+    RouteConfig route;
+    route.path = "/";
+    route.root = rootIt != _data.end() ? stripQuotes(rootIt->second) : (_server.root.empty() ? "html" : _server.root);
+    route.autoindex = autoindexIt != _data.end() ? get<bool>("server.route.autoindex") : _server.autoindex;
+    route.directory_listing = true;
+    route.default_file = defaultFileIt != _data.end() ? stripQuotes(defaultFileIt->second) : "";
+    route.upload_path = uploadIt != _data.end() ? stripQuotes(uploadIt->second) : "";
+    route.redirect = redirectIt != _data.end() ? stripQuotes(redirectIt->second) : "";
+    route.methods = methodsIt != _data.end() ? splitList(methodsIt->second) : std::vector<std::string>();
+    if (route.methods.empty()) {
+      route.methods.push_back("GET");
+      route.methods.push_back("POST");
+      route.methods.push_back("DELETE");
+    }
+    route.cgi_enabled = cgiEnabledIt != _data.end() ? get<bool>("server.route.cgi_enabled") : _server.cgi_enabled;
+    route.cgi_extension = cgiExtIt != _data.end() ? stripQuotes(cgiExtIt->second) : "";
+    route.default_error_page = errPageIt != _data.end() ? stripQuotes(errPageIt->second) : _server.default_error_page;
+    route.max_body_size = maxBodyIt != _data.end() ? static_cast<std::size_t>(get<int>("server.route.max_body_size")) : _server.max_body_size;
+    _server.routes.push_back(route);
   }
-  route.cgi_enabled = cgiEnabledIt != _data.end() ? get<bool>("server.route.cgi_enabled") : _server.cgi_enabled;
-  route.cgi_extension = cgiExtIt != _data.end() ? stripQuotes(cgiExtIt->second) : "";
-  route.default_error_page = errPageIt != _data.end() ? stripQuotes(errPageIt->second) : _server.default_error_page;
-  route.max_body_size = maxBodyIt != _data.end() ? static_cast<std::size_t>(get<int>("server.route.max_body_size")) : _server.max_body_size;
-  _server.routes.push_back(route);
+
+  const std::string routePrefix = "server.routes.";
+  std::map<std::string, RouteConfig> namedRoutes;
+  for (std::map<std::string, std::string>::const_iterator it = _data.begin();
+       it != _data.end(); ++it) {
+    if (it->first.compare(0, routePrefix.size(), routePrefix) != 0)
+      continue;
+    std::string::size_type quoteStart = routePrefix.size();
+    if (quoteStart >= it->first.size() || it->first[quoteStart] != '"')
+      continue;
+    std::string::size_type quoteEnd = it->first.find('"', quoteStart + 1);
+    if (quoteEnd == std::string::npos || quoteEnd + 1 >= it->first.size() ||
+        it->first[quoteEnd + 1] != '.')
+      continue;
+
+    std::string routePath = stripQuotes(it->first.substr(quoteStart, quoteEnd - quoteStart + 1));
+    std::string setting = it->first.substr(quoteEnd + 2);
+    if (routePath.empty() || routePath[0] != '/')
+      throw std::runtime_error("Route path must start with '/': " + routePath);
+
+    std::map<std::string, RouteConfig>::iterator routeIt = namedRoutes.find(routePath);
+    if (routeIt == namedRoutes.end()) {
+      RouteConfig newRoute;
+      newRoute.path = routePath;
+      newRoute.root = _server.root.empty() ? "html" : _server.root;
+      newRoute.autoindex = _server.autoindex;
+      newRoute.cgi_enabled = _server.cgi_enabled;
+      newRoute.default_error_page = _server.default_error_page;
+      newRoute.max_body_size = _server.max_body_size;
+      namedRoutes.insert(std::make_pair(routePath, newRoute));
+      routeIt = namedRoutes.find(routePath);
+    }
+    RouteConfig& route = routeIt->second;
+
+    if (setting == "root")
+      route.root = stripQuotes(it->second);
+    else if (setting == "methods")
+      route.methods = splitList(it->second);
+    else if (setting == "autoindex")
+      route.autoindex = convertValue<bool>(it->second);
+    else if (setting == "default_file")
+      route.default_file = stripQuotes(it->second);
+    else if (setting == "upload_path")
+      route.upload_path = stripQuotes(it->second);
+    else if (setting == "redirect")
+      route.redirect = stripQuotes(it->second);
+    else if (setting == "cgi_enabled")
+      route.cgi_enabled = convertValue<bool>(it->second);
+    else if (setting == "cgi_extension")
+      route.cgi_extension = stripQuotes(it->second);
+    else if (setting == "default_error_page")
+      route.default_error_page = stripQuotes(it->second);
+    else if (setting == "max_body_size")
+      route.max_body_size = static_cast<std::size_t>(convertValue<int>(it->second));
+  }
+
+  for (std::map<std::string, RouteConfig>::const_iterator it = namedRoutes.begin();
+       it != namedRoutes.end(); ++it)
+    _server.routes.push_back(it->second);
 }
 
 bool Config::has(const std::string& key) const {

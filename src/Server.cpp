@@ -138,7 +138,10 @@ void Server::run() {
             to_string(static_cast<unsigned int>(addressBytes[1])) + "." +
             to_string(static_cast<unsigned int>(addressBytes[2])) + "." +
             to_string(static_cast<unsigned int>(addressBytes[3]));
-          Client newClient(newClientFd, remoteAddressText);
+          std::size_t maxRequestSize = _config.server().max_body_size;
+          if (maxRequestSize <= static_cast<std::size_t>(-1) - 65536)
+            maxRequestSize += 65536;
+          Client newClient(newClientFd, remoteAddressText, maxRequestSize);
           clients[newClientFd] = newClient;
           Logger::info("New client connected: " + to_string(newClientFd));
         } else {

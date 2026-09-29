@@ -8,11 +8,12 @@
 class Client {
   public:
     Client();
-    Client(int _socket, const std::string& remoteAddress = "0.0.0.0");
+    Client(int _socket, const std::string& remoteAddress = "0.0.0.0",
+      std::size_t maxRequestSize = 1024);
     ~Client();
     bool readRequest();
     int getSocket() const;
-    int getMaxSizeReq() const;
+    std::size_t getMaxSizeReq() const;
     bool getReadTowrite() const;
     bool isCgiPending() const;
     bool hasCgiResponse() const;
@@ -25,7 +26,7 @@ class Client {
     std::string getRemoteAddress() const;
   private:
     int _socket;
-	  int _maxSizeReq;
+    std::size_t _maxSizeReq;
     std::string _remoteAddress;
     std::string _reqBuffer;
     bool _readToWrite;

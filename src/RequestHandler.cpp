@@ -23,6 +23,7 @@
 static bool routeMatchesPath(const std::string& routePath, const std::string& requestPath);
 static const Config::RouteConfig* matchRoute(const Config& config, const std::string& requestPath);
 static bool routeAllowsMethod(const Config::RouteConfig& route, HttpMethod::Code method);
+static std::string trimCgiHeaderValue(const std::string& value);
 
 RequestHandler::RequestHandler(HttpRequest req, int socket, const Config& config,
                                const std::string& remoteAddress)
@@ -32,6 +33,12 @@ void RequestHandler::handleMethod() {
   const Config::RouteConfig* route = matchRoute(_config, this->_req.getPath());
   if (route != NULL && !routeAllowsMethod(*route, this->_req.getMethod()))
     throw MethodNotAllowed(_socket);
+  if (route != NULL && !route->redirect.empty()) {
+    std::vector<std::pair<std::string, std::string> > headers;
+    headers.push_back(std::make_pair("Location", route->redirect));
+    HttpResponse("", HttpStatus::FOUND, _socket, "text/plain", headers).sendHttpResponse();
+    return;
+  }
 
   HttpResponse res("", HttpStatus::METHOD_NOT_ALLOWED, this->_socket, "text/plain");
   switch (static_cast<int>(this->_req.getMethod())) {
@@ -226,6 +233,9 @@ std::string RequestHandler::configuredValue(const std::string& key) const {
 }
 
 bool RequestHandler::prepareCgi(CommonGatewayInterface& cgi) {
+  const Config::RouteConfig* route = matchRoute(_config, _req.getPath());
+  if (route != NULL && !route->redirect.empty())
+    return false;
   std::string path = resolvePath(_req.getPath());
   if (!isCgi(path) && !isCgi(path, true))
     return false;
@@ -280,19 +290,121 @@ HttpResponse RequestHandler::handleGet(const Config& config) {
 }
 
 HttpResponse RequestHandler::handlePost() {
-    std::string path = resolvePath(_req.getPath());
-    return HttpResponse("", HttpStatus::CREATED, _socket, "text/plain");
+  const Config::RouteConfig* route = matchRoute(_config, _req.getPath());
+  if (route == NULL || route->upload_path.empty())
+    throw Forbidden(_socket);
+  if (_req.getBody().size() > route->max_body_size)
+    throw HttpException(HttpStatus::PAYLOAD_TOO_LARGE, _socket);
+
+  std::string filename;
+  std::string fileContent = _req.getBody();
+  std::string contentType = _req.getHeader("content-type");
+  std::string::size_type multipartPos = contentType.find("multipart/form-data");
+  if (multipartPos != std::string::npos) {
+    std::string::size_type boundaryPos = contentType.find("boundary=");
+    if (boundaryPos == std::string::npos)
+      throw BadRequest(_socket);
+    std::string boundary = contentType.substr(boundaryPos + 9);
+    std::string::size_type semicolon = boundary.find(';');
+    if (semicolon != std::string::npos)
+      boundary.erase(semicolon);
+    boundary = trimCgiHeaderValue(boundary);
+    if (boundary.size() >= 2 && boundary[0] == '"' && boundary[boundary.size() - 1] == '"')
+      boundary = boundary.substr(1, boundary.size() - 2);
+    if (boundary.empty())
+      throw BadRequest(_socket);
+
+    std::string delimiter = "--" + boundary;
+    std::string::size_type partStart = _req.getBody().find(delimiter);
+    if (partStart == std::string::npos)
+      throw BadRequest(_socket);
+    partStart = _req.getBody().find("\r\n", partStart);
+    if (partStart == std::string::npos)
+      throw BadRequest(_socket);
+    ++partStart;
+    std::string::size_type headersEnd = _req.getBody().find("\r\n\r\n", partStart);
+    if (headersEnd == std::string::npos)
+      throw BadRequest(_socket);
+
+    std::string partHeaders = _req.getBody().substr(partStart, headersEnd - partStart);
+    std::string loweredHeaders = partHeaders;
+    for (std::string::size_type i = 0; i < loweredHeaders.size(); ++i)
+      loweredHeaders[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(loweredHeaders[i])));
+    std::string::size_type disposition = loweredHeaders.find("content-disposition:");
+    std::string::size_type filenamePos = disposition == std::string::npos ? std::string::npos : loweredHeaders.find("filename=", disposition);
+    if (filenamePos == std::string::npos)
+      throw BadRequest(_socket);
+    filenamePos += 9;
+    if (filenamePos >= partHeaders.size())
+      throw BadRequest(_socket);
+    char quote = partHeaders[filenamePos] == '"' ? '"' : '\0';
+    if (quote != '\0')
+      ++filenamePos;
+    std::string::size_type filenameEnd = quote != '\0' ? partHeaders.find(quote, filenamePos) : partHeaders.find(';', filenamePos);
+    if (filenameEnd == std::string::npos)
+      filenameEnd = partHeaders.size();
+    filename = partHeaders.substr(filenamePos, filenameEnd - filenamePos);
+
+    std::string::size_type dataStart = headersEnd + 4;
+    std::string::size_type dataEnd = _req.getBody().find("\r\n" + delimiter, dataStart);
+    if (dataEnd == std::string::npos)
+      throw BadRequest(_socket);
+    fileContent = _req.getBody().substr(dataStart, dataEnd - dataStart);
+  } else {
+    std::string::size_type routePathLength = route->path.size();
+    while (routePathLength > 1 && route->path[routePathLength - 1] == '/')
+      --routePathLength;
+    if (_req.getPath().size() <= routePathLength || _req.getPath()[routePathLength] != '/')
+      throw BadRequest(_socket);
+    filename = _req.getPath().substr(routePathLength + 1);
+  }
+
+  std::string::size_type separator = filename.find_last_of("/\\");
+  if (separator != std::string::npos)
+    filename = filename.substr(separator + 1);
+  if (filename.empty() || filename == "." || filename == ".." ||
+      filename.find_first_of("\r\n") != std::string::npos ||
+      filename.find('\0') != std::string::npos)
+    throw BadRequest(_socket);
+
+  std::string uploadDirectory = route->upload_path;
+  if (uploadDirectory.find("..") != std::string::npos)
+    throw Forbidden(_socket);
+  if (uploadDirectory[0] != '/') {
+    char currentDirectory[PATH_MAX];
+    if (getcwd(currentDirectory, sizeof(currentDirectory)) == NULL)
+      throw InternalServerError(_socket);
+    uploadDirectory = std::string(currentDirectory) + "/" + uploadDirectory;
+  }
+  struct stat directoryStat;
+  if (stat(uploadDirectory.c_str(), &directoryStat) != 0 || !S_ISDIR(directoryStat.st_mode))
+    throw InternalServerError(_socket);
+  if (access(uploadDirectory.c_str(), W_OK) != 0)
+    throw Forbidden(_socket);
+
+  std::string destination = uploadDirectory;
+  if (destination[destination.size() - 1] != '/')
+    destination += "/";
+  destination += filename;
+  std::ofstream output(destination.c_str(), std::ios::binary | std::ios::out | std::ios::trunc);
+  if (!output.is_open())
+    throw InternalServerError(_socket);
+  output.write(fileContent.data(), static_cast<std::streamsize>(fileContent.size()));
+  if (!output.good())
+    throw InternalServerError(_socket);
+  output.close();
+  return HttpResponse("Uploaded " + filename, HttpStatus::CREATED, _socket, "text/plain");
 }
 
 HttpResponse RequestHandler::handleDelete() {
-  Logger::debug("Handling DELETE " + _req.getPath());
+  // Logger::debug("Handling DELETE " + _req.getPath());
   std::string path = resolvePath(_req.getPath());
 
   if (access(path.c_str(), F_OK) == 0) {
     Logger::info("Attempt to delete `" + _req.getPath() + "`");
 
     if (access(path.c_str(), W_OK) != 0) {
-      Logger::error("Deletion of file `" + _req.getPath() + "` is forbidden");
+      Logger::warn("Deletion of file `" + _req.getPath() + "` is forbidden");
       throw Forbidden(_socket);
     }
 
@@ -301,7 +413,7 @@ HttpResponse RequestHandler::handleDelete() {
       throw InternalServerError(_socket);
   }
   else {
-    Logger::error("File `" + _req.getPath() + "` not found");
+    Logger::warn("File `" + _req.getPath() + "` not found");
     throw NotFound(_socket);
   }
 

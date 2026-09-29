@@ -10,8 +10,8 @@
 
 Client::Client() : _socket(-1), _maxSizeReq(1), _remoteAddress("0.0.0.0"), _reqBuffer(""), _readToWrite(false), _cgiPending(false), _cgiResponse(false), _cgiSucceeded(false) {}
 
-Client::Client(int socket, const std::string& remoteAddress) :
-  _socket(socket), _maxSizeReq(1024), _remoteAddress(remoteAddress), _reqBuffer(""),
+Client::Client(int socket, const std::string& remoteAddress, std::size_t maxRequestSize) :
+  _socket(socket), _maxSizeReq(maxRequestSize), _remoteAddress(remoteAddress), _reqBuffer(""),
   _readToWrite(false), _cgiPending(false), _cgiResponse(false), _cgiSucceeded(false) {}
 
 int Client::getSocket() const {
@@ -20,10 +20,14 @@ int Client::getSocket() const {
 
 bool Client::readRequest() {
   char buffer[1024] = {0};
-  if (getMaxSizeReq() < static_cast<int>(getReqBuffer().size())) {
+  if (_reqBuffer.size() >= _maxSizeReq) {
     return false;
   }
-  ssize_t bytesRead = recv(_socket, buffer, sizeof(buffer), 0);
+  std::size_t bytesToRead = sizeof(buffer);
+  std::size_t remaining = _maxSizeReq - _reqBuffer.size();
+  if (bytesToRead > remaining)
+    bytesToRead = remaining;
+  ssize_t bytesRead = recv(_socket, buffer, bytesToRead, 0);
   if (bytesRead == -1) {
     return true;
   } else if (bytesRead == 0) {
@@ -55,7 +59,7 @@ bool  Client::getReadTowrite() const {
   return _readToWrite;
 }
 
-int Client::getMaxSizeReq() const {
+std::size_t Client::getMaxSizeReq() const {
   return _maxSizeReq;
 }
 
