@@ -52,7 +52,7 @@ Here, handling a request can be either displaying a premade `.html` page or exec
 After cloning the repository, run `make` at the project's root then execute with
 
 ```sh
-./webserv config/<config_file.toml>
+./webserv example/<feature>/config.toml
 ```
 
 A configuration file is a TOML document. The server reads a `[server]` table and can also accept nested route settings under `[server.route]`-style sections.
@@ -108,7 +108,7 @@ Supported route-level parameters:
 
 Any configuration file must be in `.toml` format. See [official documentation](https://toml.io/en/).
 
-The server can then be accessed at **localhost:port**, or from any machine connected to the same local network with **host_ip:port**.
+The server can then be accessed at **localhost:port**, or from any machine connected to the same local network with **<host_ip>:port**.
 
 ### Direct HTTP methods test
 
@@ -143,5 +143,6 @@ curl -i -X DELETE http://localhost:8080/assets/DELETEME.md
 
 AI was used for :
 
-- setting up the boring stuff
-- debugging and stress-testing the CGI.
+- explaining concepts and providing documentation
+- setting up the boring stuff and keeping this README up-to-date
+- debugging + stress-testing the CGI and config implementation
