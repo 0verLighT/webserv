@@ -5,7 +5,7 @@ static bool isDir(std::string path) {
   struct stat st;
 
   if (stat(path.c_str(), &st) != 0) {
-    Logger::error("stat : " + std::string(strerror(errno)));
+    Logger::warn("stat: " + path + ": " + std::string(strerror(errno)));
     return false;
   }
   return S_ISDIR(st.st_mode);

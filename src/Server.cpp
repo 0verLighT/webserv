@@ -180,10 +180,10 @@ void Server::run() {
           } else
             handler.handleMethod();
         } catch (const HttpException& e) {
-          Logger::error("HttpException :" + to_string(e.what()));
+          Logger::warn("HttpException: " + to_string(e.what()));
           e.SendExceptionResponse(_config.errorPage(e.statusCode(), req.getPath()));
         } catch (const std::exception& e) {
-          Logger::error("Exception :" + to_string(e.what()));
+          Logger::error("Exception: " + to_string(e.what()));
         }
         if (!cgiStarted) {
           clients[clientSocket].closeConnection();
