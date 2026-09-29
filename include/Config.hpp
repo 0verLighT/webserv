@@ -81,6 +81,7 @@ class Config {
     const ServerConfig& server() const;
     const std::vector<RouteConfig>& routes() const;
     const RouteConfig* route(const std::string& path) const;
+    const RouteConfig* routeForPath(const std::string& requestPath) const;
     std::string errorPage(int status, const std::string& requestPath) const;
 
     /** @brief Looks up a key and convert its textual TOML value to the relevant type.

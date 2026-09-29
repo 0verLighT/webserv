@@ -141,7 +141,8 @@ void Server::run() {
           std::size_t maxRequestSize = _config.server().max_body_size;
           if (maxRequestSize <= static_cast<std::size_t>(-1) - 65536)
             maxRequestSize += 65536;
-          Client newClient(newClientFd, remoteAddressText, maxRequestSize);
+          Client newClient(newClientFd, remoteAddressText, maxRequestSize,
+            _config.server().max_body_size);
           clients[newClientFd] = newClient;
           Logger::info("New client connected: " + to_string(newClientFd));
         } else {
@@ -167,6 +168,11 @@ void Server::run() {
           clients[clientSocket].getRemoteAddress());
         bool cgiStarted = false;
         try {
+          if (clients[clientSocket].isRequestInvalid())
+            throw HttpException(HttpStatus::BAD_REQUEST, clientSocket);
+          if (clients[clientSocket].isRequestTooLarge())
+            throw HttpException(HttpStatus::PAYLOAD_TOO_LARGE, clientSocket);
+          handler.validateRequest();
           if (clients[clientSocket].hasCgiResponse()) {
             if (clients[clientSocket].cgiSucceeded())
               handler.handleCgiOutput(clients[clientSocket].getCgi().getOutput()).sendHttpResponse();

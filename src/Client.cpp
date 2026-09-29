@@ -8,11 +8,17 @@
 #include "http/HttpRequest.hpp"
 #include "utils.hpp"
 
-Client::Client() : _socket(-1), _maxSizeReq(1), _remoteAddress("0.0.0.0"), _reqBuffer(""), _readToWrite(false), _cgiPending(false), _cgiResponse(false), _cgiSucceeded(false) {}
+Client::Client() : _socket(-1), _maxSizeReq(1), _maxBodySize(1),
+  _remoteAddress("0.0.0.0"), _reqBuffer(""), _readToWrite(false),
+  _requestTooLarge(false), _requestInvalid(false), _cgiPending(false),
+  _cgiResponse(false), _cgiSucceeded(false) {}
 
-Client::Client(int socket, const std::string& remoteAddress, std::size_t maxRequestSize) :
-  _socket(socket), _maxSizeReq(maxRequestSize), _remoteAddress(remoteAddress), _reqBuffer(""),
-  _readToWrite(false), _cgiPending(false), _cgiResponse(false), _cgiSucceeded(false) {}
+Client::Client(int socket, const std::string& remoteAddress, std::size_t maxRequestSize,
+               std::size_t maxBodySize) :
+  _socket(socket), _maxSizeReq(maxRequestSize), _maxBodySize(maxBodySize),
+  _remoteAddress(remoteAddress), _reqBuffer(""), _readToWrite(false),
+  _requestTooLarge(false), _requestInvalid(false), _cgiPending(false),
+  _cgiResponse(false), _cgiSucceeded(false) {}
 
 int Client::getSocket() const {
   return _socket;
@@ -21,7 +27,9 @@ int Client::getSocket() const {
 bool Client::readRequest() {
   char buffer[1024] = {0};
   if (_reqBuffer.size() >= _maxSizeReq) {
-    return false;
+    _requestTooLarge = true;
+    _readToWrite = true;
+    return true;
   }
   std::size_t bytesToRead = sizeof(buffer);
   std::size_t remaining = _maxSizeReq - _reqBuffer.size();
@@ -40,7 +48,41 @@ bool Client::readRequest() {
     HttpRequest req;
     req.parseRequest(_reqBuffer);
 
+    std::string contentLength = req.getHeader("content-length");
+    if (!contentLength.empty()) {
+      std::size_t length = 0;
+      bool validLength = true;
+      for (std::string::size_type i = 0; i < contentLength.size(); ++i) {
+        if (contentLength[i] < '0' || contentLength[i] > '9') {
+          validLength = false;
+          break;
+        }
+        std::size_t digit = static_cast<std::size_t>(contentLength[i] - '0');
+        if (length > (static_cast<std::size_t>(-1) - digit) / 10) {
+          _requestTooLarge = true;
+          _readToWrite = true;
+          return true;
+        }
+        length = length * 10 + digit;
+      }
+      if (validLength && length > _maxBodySize) {
+        _requestTooLarge = true;
+        _readToWrite = true;
+        return true;
+      }
+      if (!validLength) {
+        _requestInvalid = true;
+        _readToWrite = true;
+        return true;
+      }
+    }
+
     if (req.isBodyComplete()) {
+      if (req.getBody().size() > _maxBodySize) {
+        _requestTooLarge = true;
+        _readToWrite = true;
+        return true;
+      }
       _readToWrite = true;
     }
   }
@@ -57,6 +99,14 @@ std::string Client::getRemoteAddress() const {
 
 bool  Client::getReadTowrite() const {
   return _readToWrite;
+}
+
+bool Client::isRequestTooLarge() const {
+  return _requestTooLarge;
+}
+
+bool Client::isRequestInvalid() const {
+  return _requestInvalid;
 }
 
 std::size_t Client::getMaxSizeReq() const {

@@ -83,7 +83,6 @@ methods = ["GET", "POST"]
 cgi_enabled = true
 cgi_extension = ".py"
 executor = "/usr/bin/python"
-
 ```
 
 Supported server-level parameters:

@@ -17,6 +17,7 @@ class RequestHandler {
     RequestHandler(HttpRequest req, int socket, const Config& config,
       const std::string& remoteAddress = "0.0.0.0");
     void handleMethod();
+    void validateRequest() const;
     bool prepareCgi(CommonGatewayInterface& cgi);
     HttpResponse handleCgiOutput(const std::string& output);
     ~RequestHandler();

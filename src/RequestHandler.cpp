@@ -20,7 +20,6 @@
 #include <unistd.h>
 #include <vector>
 
-static bool routeMatchesPath(const std::string& routePath, const std::string& requestPath);
 static const Config::RouteConfig* matchRoute(const Config& config, const std::string& requestPath);
 static bool routeAllowsMethod(const Config::RouteConfig& route, HttpMethod::Code method);
 static std::string trimCgiHeaderValue(const std::string& value);
@@ -28,6 +27,15 @@ static std::string trimCgiHeaderValue(const std::string& value);
 RequestHandler::RequestHandler(HttpRequest req, int socket, const Config& config,
                                const std::string& remoteAddress)
   : _req(req), _socket(socket), _remoteAddress(remoteAddress), _config(config) {}
+
+void RequestHandler::validateRequest() const {
+  std::size_t maxBodySize = _config.server().max_body_size;
+  const Config::RouteConfig* route = matchRoute(_config, _req.getPath());
+  if (route != NULL && route->max_body_size < maxBodySize)
+    maxBodySize = route->max_body_size;
+  if (_req.getBody().size() > maxBodySize)
+    throw HttpException(HttpStatus::PAYLOAD_TOO_LARGE, _socket);
+}
 
 void RequestHandler::handleMethod() {
   const Config::RouteConfig* route = matchRoute(_config, this->_req.getPath());
@@ -60,49 +68,8 @@ void RequestHandler::handleMethod() {
   res.sendHttpResponse();
 }
 
-static bool routeMatchesPath(const std::string& routePath, const std::string& requestPath) {
-  std::string normalizedRoute = routePath;
-  while (!normalizedRoute.empty() && normalizedRoute[normalizedRoute.size() - 1] == '/')
-    normalizedRoute.erase(normalizedRoute.size() - 1);
-  if (normalizedRoute.empty())
-    normalizedRoute = "/";
-
-  if (normalizedRoute == "/")
-    return true;
-  if (requestPath == normalizedRoute)
-    return true;
-  if (requestPath.compare(0, normalizedRoute.size(), normalizedRoute) == 0 &&
-      requestPath.size() > normalizedRoute.size() &&
-      requestPath[normalizedRoute.size()] == '/')
-    return true;
-  return false;
-}
-
 static const Config::RouteConfig* matchRoute(const Config& config, const std::string& requestPath) {
-  const std::vector<Config::RouteConfig>& routes = config.routes();
-  const Config::RouteConfig* bestMatch = NULL;
-  std::string::size_type bestLength = 0;
-
-  for (std::vector<Config::RouteConfig>::const_iterator it = routes.begin(); it != routes.end(); ++it) {
-    const std::string& routePath = it->path;
-    if (!routeMatchesPath(routePath, requestPath))
-      continue;
-    std::string normalizedRoute = routePath;
-    while (!normalizedRoute.empty() && normalizedRoute[normalizedRoute.size() - 1] == '/')
-      normalizedRoute.erase(normalizedRoute.size() - 1);
-    if (normalizedRoute.empty())
-      normalizedRoute = "/";
-    if (normalizedRoute.size() > bestLength) {
-      bestMatch = &(*it);
-      bestLength = normalizedRoute.size();
-    }
-  }
-
-  if (bestMatch != NULL)
-    return bestMatch;
-  if (!routes.empty())
-    return &routes.front();
-  return NULL;
+  return config.routeForPath(requestPath);
 }
 
 static bool routeAllowsMethod(const Config::RouteConfig& route, HttpMethod::Code method) {

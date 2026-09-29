@@ -108,10 +108,27 @@ void HttpRequest::parseRequest(std::string buffer) {
       if (contentLength.empty()) {
         _bodyComplete = true;
       } else {
-        size_t expected = static_cast<size_t>(toInt(contentLength));
-        _bodyComplete = _body.size() >= expected;
-        if (_body.size() > expected)
-          _body.resize(expected);
+        size_t expected = 0;
+        bool validLength = true;
+        for (std::string::size_type i = 0; i < contentLength.size(); ++i) {
+          if (contentLength[i] < '0' || contentLength[i] > '9') {
+            validLength = false;
+            break;
+          }
+          size_t digit = static_cast<size_t>(contentLength[i] - '0');
+          if (expected > (static_cast<size_t>(-1) - digit) / 10) {
+            validLength = false;
+            break;
+          }
+          expected = expected * 10 + digit;
+        }
+        if (!validLength) {
+          _bodyComplete = false;
+        } else {
+          _bodyComplete = _body.size() >= expected;
+          if (_body.size() > expected)
+            _body.resize(expected);
+        }
       }
     }
   }

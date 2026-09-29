@@ -61,6 +61,25 @@ const Config::RouteConfig* Config::route(const std::string& path) const {
   return NULL;
 }
 
+const Config::RouteConfig* Config::routeForPath(const std::string& requestPath) const {
+  const RouteConfig* bestMatch = NULL;
+  std::string::size_type bestLength = 0;
+  for (std::vector<RouteConfig>::const_iterator it = _server.routes.begin();
+       it != _server.routes.end(); ++it) {
+    std::string routePath = it->path;
+    while (routePath.size() > 1 && routePath[routePath.size() - 1] == '/')
+      routePath.erase(routePath.size() - 1);
+    bool matches = routePath == "/" || requestPath == routePath ||
+      (requestPath.compare(0, routePath.size(), routePath) == 0 &&
+       requestPath.size() > routePath.size() && requestPath[routePath.size()] == '/');
+    if (matches && routePath.size() > bestLength) {
+      bestMatch = &(*it);
+      bestLength = routePath.size();
+    }
+  }
+  return bestMatch;
+}
+
 std::string Config::errorPage(int status, const std::string& requestPath) const {
   const RouteConfig* matchedRoute = NULL;
   std::string::size_type matchedLength = 0;
