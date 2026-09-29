@@ -18,6 +18,7 @@ class Config {
       std::string upload_path;
       std::string redirect;
       std::string cgi_extension;
+      std::string executor;
       std::string default_error_page;
       std::size_t max_body_size;
       std::vector<std::string> methods;
@@ -26,7 +27,7 @@ class Config {
       RouteConfig()
         : autoindex(true), directory_listing(true), cgi_enabled(true),
           path("/"), root(""), default_file(""), upload_path(""),
-          redirect(""), cgi_extension(""), default_error_page(""),
+          redirect(""), cgi_extension(""), executor(""), default_error_page(""),
           max_body_size(1048576), methods() {}
     };
 

@@ -15,3 +15,10 @@ max_body_size = 1048576
 root = "html"
 methods = ["GET", "POST", "DELETE"]
 autoindex = true
+
+[server.routes."/post"]
+root = "example/post"
+methods = ["GET", "POST"]
+cgi_enabled = true
+cgi_extension = ".py"
+executor = "/usr/bin/python"

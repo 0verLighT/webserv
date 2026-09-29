@@ -56,6 +56,7 @@ After cloning the repository, run `make` at the project's root then execute with
 ```
 
 A configuration file is a TOML document. The server reads a `[server]` table and can also accept nested route settings under `[server.route]`-style sections.
+Named route tables use `[server.routes."/url-prefix"]`; CGI scripts on that route are selected by their configured extension.
 
 ```toml
 [server]
@@ -75,7 +76,13 @@ max_body_size = 1048576
 root = "html"
 methods = ["GET", "POST", "DELETE"]
 autoindex = true
-default_file = "index.html"
+
+[server.routes."/post"]
+root = "example/post"
+methods = ["GET", "POST"]
+cgi_enabled = true
+cgi_extension = ".py"
+executor = "/usr/bin/python"
 
 ```
 
@@ -104,6 +111,7 @@ Supported route-level parameters:
 - **redirect** = *string* -> redirect target for the route.
 - **cgi_enabled** = *boolean* -> CGI enable/disable for that route.
 - **cgi_extension** = *string* -> file extension to treat as CGI.
+- **executor** = *string* -> route-specific CGI interpreter; defaults to the server-level executor.
 - **default_error_page** = *string* -> route-specific error page. Optional.
 - **error_page_<status>** = *string* -> route-specific page for one status, overriding the server mapping for that route.
 - **max_body_size** = *int* -> maximum request size for the route.

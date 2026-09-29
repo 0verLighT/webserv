@@ -99,8 +99,8 @@ void Config::parseServerConfig() {
   _server.port = _data.find("server.port") != _data.end() ? get<int>("server.port") : (_data.find("port") != _data.end() ? get<int>("port") : 8080);
   _server.host = _data.find("server.host") != _data.end() ? get<std::string>("server.host") : (_data.find("host") != _data.end() ? get<std::string>("host") : "0.0.0.0");
   _server.server_name = _data.find("server.server_name") != _data.end() ? get<std::string>("server.server_name") : (_data.find("server_name") != _data.end() ? get<std::string>("server_name") : "localhost");
-  _server.file = _data.find("server.file") != _data.end() ? get<std::string>("server.file") : (_data.find("file") != _data.end() ? get<std::string>("file") : "");
-  _server.executor = _data.find("server.executor") != _data.end() ? get<std::string>("server.executor") : (_data.find("executor") != _data.end() ? get<std::string>("executor") : "");
+  _server.file = _data.find("server.file") != _data.end() ? stripQuotes(_data.find("server.file")->second) : (_data.find("file") != _data.end() ? stripQuotes(_data.find("file")->second) : "");
+  _server.executor = _data.find("server.executor") != _data.end() ? stripQuotes(_data.find("server.executor")->second) : (_data.find("executor") != _data.end() ? stripQuotes(_data.find("executor")->second) : "");
   _server.timeout = _data.find("server.timeout") != _data.end() ? get<int>("server.timeout") : (_data.find("timeout") != _data.end() ? get<int>("timeout") : 5000);
   _server.default_error_page = _data.find("server.default_error_page") != _data.end() ? stripQuotes(_data.find("server.default_error_page")->second) : (_data.find("default_error_page") != _data.end() ? stripQuotes(_data.find("default_error_page")->second) : "");
   _server.max_body_size = _data.find("server.max_body_size") != _data.end() ? static_cast<std::size_t>(get<int>("server.max_body_size")) : (_data.find("max_body_size") != _data.end() ? static_cast<std::size_t>(get<int>("max_body_size")) : 1048576);
@@ -157,13 +157,14 @@ void Config::parseRouteConfig() {
   std::map<std::string, std::string>::const_iterator redirectIt = _data.find("server.route.redirect");
   std::map<std::string, std::string>::const_iterator cgiEnabledIt = _data.find("server.route.cgi_enabled");
   std::map<std::string, std::string>::const_iterator cgiExtIt = _data.find("server.route.cgi_extension");
+  std::map<std::string, std::string>::const_iterator executorIt = _data.find("server.route.executor");
   std::map<std::string, std::string>::const_iterator errPageIt = _data.find("server.route.default_error_page");
   std::map<std::string, std::string>::const_iterator maxBodyIt = _data.find("server.route.max_body_size");
 
   if (rootIt != _data.end() || methodsIt != _data.end() || autoindexIt != _data.end() ||
       defaultFileIt != _data.end() || uploadIt != _data.end() || redirectIt != _data.end() ||
       cgiEnabledIt != _data.end() || cgiExtIt != _data.end() || errPageIt != _data.end() ||
-      maxBodyIt != _data.end()) {
+      executorIt != _data.end() || maxBodyIt != _data.end()) {
     RouteConfig route;
     route.path = "/";
     route.root = rootIt != _data.end() ? stripQuotes(rootIt->second) : (_server.root.empty() ? "html" : _server.root);
@@ -180,6 +181,7 @@ void Config::parseRouteConfig() {
     }
     route.cgi_enabled = cgiEnabledIt != _data.end() ? get<bool>("server.route.cgi_enabled") : _server.cgi_enabled;
     route.cgi_extension = cgiExtIt != _data.end() ? stripQuotes(cgiExtIt->second) : "";
+    route.executor = executorIt != _data.end() ? stripQuotes(executorIt->second) : "";
     route.default_error_page = errPageIt != _data.end() ? stripQuotes(errPageIt->second) : _server.default_error_page;
     route.max_body_size = maxBodyIt != _data.end() ? static_cast<std::size_t>(get<int>("server.route.max_body_size")) : _server.max_body_size;
     _server.routes.push_back(route);
@@ -234,6 +236,8 @@ void Config::parseRouteConfig() {
       route.cgi_enabled = convertValue<bool>(it->second);
     else if (setting == "cgi_extension")
       route.cgi_extension = stripQuotes(it->second);
+    else if (setting == "executor")
+      route.executor = stripQuotes(it->second);
     else if (setting == "default_error_page")
       route.default_error_page = stripQuotes(it->second);
     else if (setting == "max_body_size")

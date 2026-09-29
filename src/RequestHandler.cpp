@@ -136,7 +136,7 @@ bool RequestHandler::isDirectory(std::string path) const {
   struct stat st;
 
   if (stat(path.c_str(), &st) != 0) {
-    Logger::error("stat : " + std::string(strerror(errno)));
+    Logger::warn("stat: " + path + ": " + std::string(strerror(errno)));
     return false;
   }
   return S_ISDIR(st.st_mode);
@@ -174,14 +174,24 @@ std::string RequestHandler::resolvePath(const std::string& requestPath) const {
       return defaultPath;
   }
 
-  std::string documentRootPath = std::string(currentDirectory) + "/" + root + requestPath;
+  std::string relativePath = requestPath;
+  if (route != NULL && route->path != "/") {
+    std::string routePath = route->path;
+    while (routePath.size() > 1 && routePath[routePath.size() - 1] == '/')
+      routePath.erase(routePath.size() - 1);
+    relativePath = requestPath.substr(routePath.size());
+    if (relativePath.empty())
+      relativePath = "/";
+  }
+
+  std::string documentRootPath = std::string(currentDirectory) + "/" + root + relativePath;
   struct stat st;
   if (stat(documentRootPath.c_str(), &st) == 0)
     return documentRootPath;
 
-  std::string routePath = std::string(currentDirectory) + requestPath;
-  if (stat(routePath.c_str(), &st) == 0)
-    return routePath;
+  std::string filesystemPath = std::string(currentDirectory) + relativePath;
+  if (stat(filesystemPath.c_str(), &st) == 0)
+    return filesystemPath;
   return documentRootPath;
 }
 
@@ -206,21 +216,27 @@ std::string RequestHandler::resolveConfiguredFile() const {
   return configuredFile;
 }
 
-// Check for call to CGI
-bool RequestHandler::isCgi(const std::string& path, bool allowUnconfigured) const {
-  if (!_config.server().cgi_enabled)
+// CGI is enabled only for the configured legacy landing script or a matched route extension.
+bool RequestHandler::isCgi(const std::string& path) const {
+  const Config::RouteConfig* route = matchRoute(_config, _req.getPath());
+  if (route == NULL || !route->cgi_enabled || !_config.server().cgi_enabled)
     return false;
 
-  bool isConfiguredFile = false;
-  if (!_config.server().file.empty())
-    isConfiguredFile = path == resolveConfiguredFile();
-  if (!isConfiguredFile && !allowUnconfigured)
+  bool isConfiguredFile = !_config.server().file.empty() && path == resolveConfiguredFile();
+  bool extensionMatches = false;
+  if (!route->cgi_extension.empty() && path.size() >= route->cgi_extension.size()) {
+    extensionMatches = path.compare(path.size() - route->cgi_extension.size(),
+                                    route->cgi_extension.size(), route->cgi_extension) == 0;
+  }
+  if (!isConfiguredFile && !extensionMatches)
     return false;
 
   struct stat st;
   if (stat(path.c_str(), &st) != 0 || !S_ISREG(st.st_mode))
     return false;
   if (isConfiguredFile && !_config.server().executor.empty())
+    return true;
+  if (route != NULL && (!route->executor.empty() || !_config.server().executor.empty()))
     return true;
   return access(path.c_str(), X_OK) == 0;
 }
@@ -236,10 +252,13 @@ bool RequestHandler::prepareCgi(CommonGatewayInterface& cgi) {
   const Config::RouteConfig* route = matchRoute(_config, _req.getPath());
   if (route != NULL && !route->redirect.empty())
     return false;
+  if (route != NULL && !routeAllowsMethod(*route, _req.getMethod()))
+    throw MethodNotAllowed(_socket);
   std::string path = resolvePath(_req.getPath());
-  if (!isCgi(path) && !isCgi(path, true))
+  if (!isCgi(path))
     return false;
-  cgi.processInput(_req, path, _req.getPath(), _config, _remoteAddress);
+  std::string executor = route != NULL && !route->executor.empty() ? route->executor : _config.server().executor;
+  cgi.processInput(_req, path, _req.getPath(), _config, _remoteAddress, executor);
   return true;
 }
 
@@ -270,17 +289,17 @@ HttpResponse RequestHandler::handleGet(const Config& config) {
   struct stat st;
   if (stat(path.c_str(), &st) == -1) {
     if (errno == EACCES) {
-      Logger::debug("Forbidden: " + path);
+      // Logger::debug("Forbidden: " + path);
       throw Forbidden(_socket);
     }
-    Logger::debug("File not found: " + path);
+    // Logger::debug("File not found: " + path);
     throw NotFound(_socket);
   }
 
   std::ifstream file(path.c_str());
 
   if (!file.is_open()) {
-    Logger::debug("File not found: " + path);
+    // Logger::debug("File not found: " + path);
     throw Forbidden(_socket);
   }
 
@@ -611,7 +630,7 @@ static const std::map<std::string, std::string>& miniTable() {
 }
 
 const std::string& RequestHandler::getContentTypeOfPath(std::string path) const {
-  Logger::debug(path);
+  // Logger::debug(path);
   static const std::string defaultType = "application/octet-stream";
   std::string ext = getExtensionFromPath(path);
   if (ext.empty())

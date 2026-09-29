@@ -55,9 +55,10 @@ void CommonGatewayInterface::processInput(const HttpRequest& request,
                                           const std::string& scriptPath,
                                           const std::string& scriptName,
                                           const Config& config,
-                                          const std::string& remoteAddress) {
+                                          const std::string& remoteAddress,
+                                          const std::string& executor) {
   _scriptPath = scriptPath;
-  _executor = configString(config, "executor");
+  _executor = executor.empty() ? configString(config, "executor") : executor;
   _body = request.getBody();
   _bodyOffset = 0;
   _output.clear();
