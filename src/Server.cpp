@@ -101,6 +101,12 @@ void Server::run() {
 
     for (std::map<int, Client>::iterator client = clients.begin();
          client != clients.end(); ++client) {
+      if (client->second.hasTimedOut()) {
+        Logger::warn("Client timed out: " + to_string(client->first));
+        client->second.closeConnection();
+        clientsToRemove.push_back(client->first);
+        continue;
+      }
       if (!client->second.isCgiPending())
         continue;
       int inputFd = client->second.getCgi().getInputFd();
@@ -142,7 +148,7 @@ void Server::run() {
           if (maxRequestSize <= static_cast<std::size_t>(-1) - 65536)
             maxRequestSize += 65536;
           Client newClient(newClientFd, remoteAddressText, maxRequestSize,
-            _config.server().max_body_size);
+            _config.server().max_body_size, _config.server().timeout);
           clients[newClientFd] = newClient;
           Logger::info("New client connected: " + to_string(newClientFd));
         } else {

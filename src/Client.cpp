@@ -3,21 +3,30 @@
 #include <cerrno>
 #include <cstddef>
 #include <cstring>
+#include <sys/time.h>
 #include <string>
 #include <unistd.h>
 #include "http/HttpRequest.hpp"
 #include "utils.hpp"
 
-Client::Client() : _socket(-1), _maxSizeReq(1), _maxBodySize(1),
-  _remoteAddress("0.0.0.0"), _reqBuffer(""), _readToWrite(false),
-  _requestTooLarge(false), _requestInvalid(false), _cgiPending(false),
+static std::size_t currentTimeMs() {
+  struct timeval now;
+  if (gettimeofday(&now, NULL) != 0)
+    return 0;
+  return static_cast<std::size_t>(now.tv_sec) * 1000 +
+    static_cast<std::size_t>(now.tv_usec / 1000);
+}
+
+Client::Client() : _socket(-1), _maxSizeReq(1), _maxBodySize(1), _timeoutMs(5000),
+  _deadlineMs(currentTimeMs() + _timeoutMs), _remoteAddress("0.0.0.0"), _reqBuffer(""),
+  _readToWrite(false), _requestTooLarge(false), _requestInvalid(false), _cgiPending(false),
   _cgiResponse(false), _cgiSucceeded(false) {}
 
 Client::Client(int socket, const std::string& remoteAddress, std::size_t maxRequestSize,
-               std::size_t maxBodySize) :
-  _socket(socket), _maxSizeReq(maxRequestSize), _maxBodySize(maxBodySize),
-  _remoteAddress(remoteAddress), _reqBuffer(""), _readToWrite(false),
-  _requestTooLarge(false), _requestInvalid(false), _cgiPending(false),
+               std::size_t maxBodySize, std::size_t timeoutMs) :
+  _socket(socket), _maxSizeReq(maxRequestSize), _maxBodySize(maxBodySize), _timeoutMs(timeoutMs),
+  _deadlineMs(currentTimeMs() + _timeoutMs), _remoteAddress(remoteAddress), _reqBuffer(""),
+  _readToWrite(false), _requestTooLarge(false), _requestInvalid(false), _cgiPending(false),
   _cgiResponse(false), _cgiSucceeded(false) {}
 
 int Client::getSocket() const {
@@ -42,6 +51,7 @@ bool Client::readRequest() {
     return false;
   }
   _reqBuffer += std::string(buffer, bytesRead);
+  refreshDeadline();
 
   size_t headerEnd  =_reqBuffer.find("\r\n\r\n");
   if (headerEnd != std::string::npos) {
@@ -119,6 +129,14 @@ bool Client::isCgiPending() const {
 
 bool Client::hasCgiResponse() const {
   return _cgiResponse;
+}
+
+bool Client::hasTimedOut() const {
+  return _deadlineMs != 0 && currentTimeMs() >= _deadlineMs;
+}
+
+void Client::refreshDeadline() {
+  _deadlineMs = currentTimeMs() + _timeoutMs;
 }
 
 void Client::startCgi() {

@@ -29,15 +29,19 @@ std::string HttpResponse::serialize() {
 }
 
 void HttpResponse::sendHttpResponse() {
-  // Logger::debug(_response);
-  size_t sent = 0;
-  while (sent < _response.length()) {
-    ssize_t result = send(_socket, _response.c_str() + sent, _response.length() - sent, 0);
-    if (result == -1) {
-      Logger::error("Failed to send response");
+  if (_socket < 0 || _response.empty())
+    return;
+
+  ssize_t result = send(_socket, _response.c_str(), _response.length(), MSG_NOSIGNAL);
+  if (result == -1) {
+    if (errno == EAGAIN || errno == EWOULDBLOCK)
       return;
-    }
-    sent += result;
+    Logger::error("Failed to send response");
+    return;
+  }
+
+  if (static_cast<std::size_t>(result) < _response.length()) {
+    Logger::warn("Response write completed partially on a non-blocking socket");
   }
 }
 

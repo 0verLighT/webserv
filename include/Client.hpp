@@ -9,7 +9,8 @@ class Client {
   public:
     Client();
     Client(int _socket, const std::string& remoteAddress = "0.0.0.0",
-      std::size_t maxRequestSize = 1024, std::size_t maxBodySize = 1024);
+      std::size_t maxRequestSize = 1024, std::size_t maxBodySize = 1024,
+      std::size_t timeoutMs = 5000);
     ~Client();
     bool readRequest();
     int getSocket() const;
@@ -19,6 +20,7 @@ class Client {
     bool isRequestInvalid() const;
     bool isCgiPending() const;
     bool hasCgiResponse() const;
+    bool hasTimedOut() const;
     CommonGatewayInterface& getCgi();
     void startCgi();
     void finishCgi(bool succeeded);
@@ -26,10 +28,13 @@ class Client {
     int closeConnection();
     std::string getReqBuffer() const;
     std::string getRemoteAddress() const;
+    void refreshDeadline();
   private:
     int _socket;
     std::size_t _maxSizeReq;
     std::size_t _maxBodySize;
+    std::size_t _timeoutMs;
+    std::size_t _deadlineMs;
     std::string _remoteAddress;
     std::string _reqBuffer;
     bool _readToWrite;
