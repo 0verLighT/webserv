@@ -128,17 +128,22 @@ std::string RequestHandler::resolvePath(const std::string& requestPath) const {
   if (route != NULL && !route->root.empty())
     root = route->root;
 
-  if (requestPath == "/" && route != NULL && !route->default_file.empty()) {
-    std::string defaultFile = route->default_file;
-    if (defaultFile[0] == '/')
-      return defaultFile;
-    std::string defaultPath = std::string(currentDirectory) + "/" + root;
-    if (!defaultPath.empty() && defaultPath[defaultPath.size() - 1] != '/')
-      defaultPath += "/";
-    defaultPath += defaultFile;
-    struct stat st;
-    if (stat(defaultPath.c_str(), &st) == 0)
-      return defaultPath;
+  if (route != NULL && !route->default_file.empty()) {
+    std::string routePath = route->path;
+    while (routePath.size() > 1 && routePath[routePath.size() - 1] == '/')
+      routePath.erase(routePath.size() - 1);
+    if (requestPath == routePath || requestPath == (routePath + "/")) {
+      std::string defaultFile = route->default_file;
+      if (defaultFile[0] == '/')
+        return defaultFile;
+      std::string defaultPath = std::string(currentDirectory) + "/" + root;
+      if (!defaultPath.empty() && defaultPath[defaultPath.size() - 1] != '/')
+        defaultPath += "/";
+      defaultPath += defaultFile;
+      struct stat st;
+      if (stat(defaultPath.c_str(), &st) == 0)
+        return defaultPath;
+    }
   }
 
   std::string relativePath = requestPath;
