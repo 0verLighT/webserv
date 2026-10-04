@@ -2,13 +2,17 @@
 host = "0.0.0.0"
 port = 8080
 root = "html"
-file = "example/upload/uploads/README.md"
 autoindex = false
 max_body_size = 1048576
+
+[server.route]
+root = "html"
+methods = ["GET"]
+default_file = "index.html"
+autoindex = false
 
 [server.routes."/upload"]
 root = "example/upload"
 methods = ["GET", "POST", "DELETE"]
 upload_path = "example/upload/uploads"
 autoindex = true
-default_file = "html/index.html"

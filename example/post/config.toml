@@ -2,10 +2,17 @@
 host = "0.0.0.0"
 port = 8080
 root = "html"
+autoindex = false
 cgi_enabled = true
 max_body_size = 1048576
 
-[server.routes."/cgi"]
+[server.route]
+root = "html"
+methods = ["GET"]
+default_file = "index.html"
+autoindex = false
+
+[server.routes."/example/post"]
 root = "example/post"
 methods = ["GET", "POST"]
 cgi_enabled = true

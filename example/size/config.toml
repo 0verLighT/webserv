@@ -6,5 +6,7 @@ max_body_size = 1024
 
 [server.route]
 root = "html"
-methods = ["POST"]
+methods = ["GET", "POST"]
+default_file = "index.html"
+autoindex = false
 max_body_size = 1024
