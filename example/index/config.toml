@@ -1,4 +1,0 @@
-[server]
-port = 8080
-file = "html/index.html"
-autoindex = false

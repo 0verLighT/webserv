@@ -248,6 +248,14 @@ HttpResponse RequestHandler::handleGet(const Config& config) {
   const Config::RouteConfig* route = matchRoute(config, _req.getPath());
   bool autoindex = route != NULL ? route->autoindex : config.server().autoindex;
   if (isDirectory(path)) {
+    if (route != NULL && !route->default_file.empty()) {
+      std::string defaultPath = route->default_file[0] == '/' ? route->default_file : path + "/" + route->default_file;
+      struct stat defaultStat;
+      if (stat(defaultPath.c_str(), &defaultStat) == 0 && S_ISREG(defaultStat.st_mode))
+        path = defaultPath;
+    }
+  }
+  if (isDirectory(path)) {
     if (autoindex) {
       std::string autoindexPage = generateAutoindexPage(path);
       if (autoindexPage.empty()) {
