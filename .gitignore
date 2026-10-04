@@ -6,6 +6,7 @@ obj
 
 **/*test*
 
+example/upload/uploads/*
 notes.md
 subject.md
 test.toml
