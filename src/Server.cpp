@@ -1,6 +1,8 @@
 #include "Server.hpp"
 #include "Logger.hpp"
 #include "utils.hpp"
+#include <arpa/inet.h>
+#include <cstring>
 #include <exception>
 #include <sys/fcntl.h>
 #include <sys/poll.h>
@@ -17,29 +19,49 @@ void handlerSignal(int sig) {
 
 Server::Server(const Config& config): _port(config.server().port), _config(config) {
   Logger::info("Server Created");
-  _serverAddress.sin_family =  AF_INET;
-  _serverAddress.sin_port = htons(_port);
-  _serverAddress.sin_addr.s_addr = INADDR_ANY;
-  _socket = socket(AF_INET, SOCK_STREAM, 0);
-  fcntl(_socket, F_SETFL, O_NONBLOCK);
-  Logger::info("Socket Created at " + to_string(_port));
-  if (_socket == -1) {
-    throw std::runtime_error("socket: " + std::string(strerror(errno)));
-  };
-  int opt = 1;
-  if (setsockopt(_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
-    throw std::runtime_error("setsockopt: " + std::string(strerror(errno)));
+  std::vector<Config::ListenerConfig> listeners = config.server().listeners;
+  if (listeners.empty()) {
+    Config::ListenerConfig fallback;
+    fallback.host = config.server().host;
+    fallback.port = config.server().port;
+    listeners.push_back(fallback);
   }
-  if (bind(_socket, (struct sockaddr*)&_serverAddress, sizeof(_serverAddress)) == -1) {
-    throw std::runtime_error("bind: " + std::string(strerror(errno)));
-  };
-  if (listen(_socket, 5) == -1) {
-    throw std::runtime_error("listen: " + std::string(strerror(errno)));
-  };
+
+  for (std::size_t i = 0; i < listeners.size(); ++i) {
+    sockaddr_in serverAddress;
+    std::memset(&serverAddress, 0, sizeof(serverAddress));
+    serverAddress.sin_family = AF_INET;
+    serverAddress.sin_port = htons(listeners[i].port);
+    serverAddress.sin_addr.s_addr = listeners[i].host.empty() || listeners[i].host == "0.0.0.0"
+      ? INADDR_ANY : inet_addr(listeners[i].host.c_str());
+
+    int listenSocket = socket(AF_INET, SOCK_STREAM, 0);
+    if (listenSocket == -1)
+      throw std::runtime_error("socket: " + std::string(strerror(errno)));
+    fcntl(listenSocket, F_SETFL, O_NONBLOCK);
+
+    int opt = 1;
+    if (setsockopt(listenSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+      close(listenSocket);
+      throw std::runtime_error("setsockopt: " + std::string(strerror(errno)));
+    }
+    if (bind(listenSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) == -1) {
+      close(listenSocket);
+      throw std::runtime_error("bind: " + std::string(strerror(errno)));
+    }
+    if (listen(listenSocket, 5) == -1) {
+      close(listenSocket);
+      throw std::runtime_error("listen: " + std::string(strerror(errno)));
+    }
+    _listenSockets.push_back(listenSocket);
+    _serverAddresses.push_back(serverAddress);
+    Logger::info("Socket Created at " + listeners[i].host + ":" + to_string(listeners[i].port));
+  }
 }
 
 Server::~Server() {
-  close(_socket);
+  for (std::size_t i = 0; i < _listenSockets.size(); ++i)
+    close(_listenSockets[i]);
   Logger::info("Server Destroyed");
 }
 
@@ -53,10 +75,12 @@ void Server::run() {
     std::vector<struct pollfd> pollFds;
     std::vector<int> clientsToRemove;
 
-    struct pollfd serverFd;
-    serverFd.fd = _socket;
-    serverFd.events = POLLIN;
-    pollFds.push_back(serverFd);
+    for (std::size_t i = 0; i < _listenSockets.size(); ++i) {
+      struct pollfd serverFd;
+      serverFd.fd = _listenSockets[i];
+      serverFd.events = POLLIN;
+      pollFds.push_back(serverFd);
+    }
 
     for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); ++it) {
       if (it->second.isCgiPending()) {
@@ -125,13 +149,20 @@ void Server::run() {
     }
 
     for (size_t i = 0; i < pollFds.size(); ++i) {
-      if (pollFds[i].fd != _socket && clients.find(pollFds[i].fd) == clients.end())
+      bool isListenSocket = false;
+      for (std::size_t j = 0; j < _listenSockets.size(); ++j) {
+        if (pollFds[i].fd == _listenSockets[j]) {
+          isListenSocket = true;
+          break;
+        }
+      }
+      if (!isListenSocket && clients.find(pollFds[i].fd) == clients.end())
         continue;
       if (pollFds[i].revents & POLLIN) {
-        if (pollFds[i].fd == _socket) {
+        if (isListenSocket) {
           sockaddr_in remoteAddress;
           socklen_t remoteAddressLength = sizeof(remoteAddress);
-          int newClientFd = accept(_socket,
+          int newClientFd = accept(pollFds[i].fd,
             reinterpret_cast<sockaddr *>(&remoteAddress), &remoteAddressLength);
           fcntl(newClientFd, F_SETFL, O_NONBLOCK);
           if (newClientFd == -1) {

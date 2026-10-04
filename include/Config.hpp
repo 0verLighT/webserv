@@ -8,6 +8,14 @@
 
 class Config {
   public:
+    struct ListenerConfig {
+      std::string host;
+      int port;
+
+      ListenerConfig():
+        host("0.0.0.0"), port(8080) {}
+    };
+
     struct RouteConfig {
       bool autoindex;
       bool directory_listing;
@@ -24,11 +32,11 @@ class Config {
       std::vector<std::string> methods;
       std::map<int, std::string> error_pages;
 
-      RouteConfig()
-        : autoindex(true), directory_listing(true), cgi_enabled(true),
-          path("/"), root(""), default_file(""), upload_path(""),
-          redirect(""), cgi_extension(""), executor(""), default_error_page(""),
-          max_body_size(1048576), methods() {}
+      RouteConfig():
+        autoindex(true), directory_listing(true), cgi_enabled(true),
+        path("/"), root(""), default_file(""), upload_path(""),
+        redirect(""), cgi_extension(""), executor(""), default_error_page(""),
+        max_body_size(1048576), methods() {}
     };
 
     struct ServerConfig {
@@ -43,15 +51,16 @@ class Config {
       std::string root;
       std::string default_error_page;
       std::size_t max_body_size;
+      std::vector<ListenerConfig> listeners;
       std::vector<RouteConfig> routes;
       std::map<int, std::string> error_pages;
 
-      ServerConfig()
-        : port(8080), timeout(5000),
-          cgi_enabled(true), autoindex(true),
-          host("0.0.0.0"), server_name("localhost"), file(""),
-          executor(""), root(""), default_error_page(""),
-          max_body_size(1048576), routes() {}
+      ServerConfig():
+        port(8080), timeout(5000),
+        cgi_enabled(true), autoindex(true),
+        host("0.0.0.0"), server_name("localhost"), file(""),
+        executor(""), root(""), default_error_page(""),
+        max_body_size(1048576), listeners(), routes() {}
     };
 
   private:
@@ -65,7 +74,7 @@ class Config {
     static std::vector<std::string> splitList(const std::string& value);
 
     /** @brief Reuses the parser's existing type validation.
-    */
+     */
     template <typename T>
     T convertValue(const std::string& value) const {
       TomlParser parser;
@@ -74,8 +83,8 @@ class Config {
 
   public:
     /** @brief Copies all parsed values instead of retaining a reference to TomlParser.
-    The explicit keyword prevents accidental implicit conversion and copy-construction.
-    */
+     * The explicit keyword prevents accidental implicit conversion and copy-construction.
+     */
     explicit Config(const TomlParser& parser);
 
     const ServerConfig& server() const;
@@ -85,8 +94,9 @@ class Config {
     std::string errorPage(int status, const std::string& requestPath) const;
 
     /** @brief Looks up a key and convert its textual TOML value to the relevant type.
-    Supported types are those implemented by TomlParser::convertValue.\
-    */
+     * Supported types are those implemented by TomlParser::convertValue.
+     * @warning The expected variable type needs to be specified as `get<type>()`.
+     */
     template <typename T>
     T get(const std::string& key) const {
       std::map<std::string, std::string>::const_iterator it = _data.find(key);
@@ -107,6 +117,6 @@ class Config {
     }
 
     /** @brief Checks for optional settings without throwing an exception.
-    */
+     */
     bool has(const std::string& key) const;
 };

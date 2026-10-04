@@ -30,6 +30,6 @@ class Server {
   private:
     int _port;
     const Config& _config;
-    int _socket;
-    sockaddr_in _serverAddress;
+    std::vector<int> _listenSockets;
+    std::vector<sockaddr_in> _serverAddresses;
 };

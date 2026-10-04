@@ -63,8 +63,8 @@ Named route tables use `[server.routes."/url-prefix"]`; CGI scripts on that rout
 port = 8080
 host = "0.0.0.0"
 server_name = "localhost"
-file = "example/time/time.py"
-executor = "/usr/bin/python"
+file = "example/hello_world/hello_world.sh"
+executor = "/usr/bin/bash"
 cgi_enabled = true
 autoindex = true
 timeout = 20000
@@ -81,14 +81,33 @@ autoindex = true
 root = "example/post"
 methods = ["GET", "POST"]
 cgi_enabled = true
-cgi_extension = ".py"
-executor = "/usr/bin/python"
+cgi_extension = ".sh"
+executor = "/usr/bin/bash"
 ```
+
+The server also supports binding to multiple addresses at once with TOML array-table entries:
+
+```toml
+[server]
+root = "html"
+autoindex = true
+
+[[server.listen]]
+host = "127.0.0.1"
+port = 8080
+
+[[server.listen]]
+host = "127.0.0.1"
+port = 8081
+```
+
+When `[[server.listen]]` blocks are present, each entry creates one listening socket in the same poll loop. Single-listener fields `host` and `port` can still be used as a fallback/default configuration.
 
 Supported server-level parameters:
 
-- **port** = *int* -> the port the server listens on.
-- **host** = *string* -> the bind address.
+- **port** = *int* -> the default port the server listens on when no `[[server.listen]]` entry is defined.
+- **host** = *string* -> the default bind address used for the fallback listener.
+- **listen** = *array of tables* -> one or more listeners, each with a `host` and `port` pair.
 - **server_name** = *string* -> the default server name.
 - **file** = *string* -> the default file used for startup/default route handling.
 - **executor** = *string* -> the program used to execute CGI scripts.
@@ -121,6 +140,8 @@ The server can then be accessed at **localhost:port**, or from any machine conne
 
 ### Direct HTTP methods test
 
+*Don't forget to change the address and port if necessary.*
+
 - GET
 
 ```sh
@@ -132,7 +153,7 @@ curl -i 'http://localhost:8080/example/get/GETME.md'
 ```sh
 curl -i -X POST \
   -d 'Hello, this is a test' \
-  'http://127.0.0.1:8080/example/post/getenv.py?debug=1'
+  'http://localhost:8080/example/post/getenv.py?debug=1'
 ```
 
 - DELETE

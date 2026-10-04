@@ -116,13 +116,45 @@ void Config::parseServerConfig() {
   _server.cgi_enabled = _data.find("server.cgi_enabled") != _data.end() ? get<bool>("server.cgi_enabled") : (_data.find("cgi_enabled") != _data.end() ? get<bool>("cgi_enabled") : true);
   _server.root = _data.find("server.root") != _data.end() ? stripQuotes(_data.find("server.root")->second) : (_data.find("root") != _data.end() ? stripQuotes(_data.find("root")->second) : "");
   _server.port = _data.find("server.port") != _data.end() ? get<int>("server.port") : (_data.find("port") != _data.end() ? get<int>("port") : 8080);
-  _server.host = _data.find("server.host") != _data.end() ? get<std::string>("server.host") : (_data.find("host") != _data.end() ? get<std::string>("host") : "0.0.0.0");
-  _server.server_name = _data.find("server.server_name") != _data.end() ? get<std::string>("server.server_name") : (_data.find("server_name") != _data.end() ? get<std::string>("server_name") : "localhost");
+  _server.host = _data.find("server.host") != _data.end() ? stripQuotes(get<std::string>("server.host")) : (_data.find("host") != _data.end() ? stripQuotes(get<std::string>("host")) : "0.0.0.0");
+  _server.server_name = _data.find("server.server_name") != _data.end() ? stripQuotes(get<std::string>("server.server_name")) : (_data.find("server_name") != _data.end() ? stripQuotes(get<std::string>("server_name")) : "localhost");
   _server.file = _data.find("server.file") != _data.end() ? stripQuotes(_data.find("server.file")->second) : (_data.find("file") != _data.end() ? stripQuotes(_data.find("file")->second) : "");
   _server.executor = _data.find("server.executor") != _data.end() ? stripQuotes(_data.find("server.executor")->second) : (_data.find("executor") != _data.end() ? stripQuotes(_data.find("executor")->second) : "");
   _server.timeout = _data.find("server.timeout") != _data.end() ? get<int>("server.timeout") : (_data.find("timeout") != _data.end() ? get<int>("timeout") : 5000);
   _server.default_error_page = _data.find("server.default_error_page") != _data.end() ? stripQuotes(_data.find("server.default_error_page")->second) : (_data.find("default_error_page") != _data.end() ? stripQuotes(_data.find("default_error_page")->second) : "");
   _server.max_body_size = _data.find("server.max_body_size") != _data.end() ? static_cast<std::size_t>(get<int>("server.max_body_size")) : (_data.find("max_body_size") != _data.end() ? static_cast<std::size_t>(get<int>("max_body_size")) : 1048576);
+
+  for (std::map<std::string, std::string>::const_iterator it = _data.begin(); it != _data.end(); ++it) {
+    if (it->first.compare(0, 14, "server.listen.") != 0)
+      continue;
+    std::string suffix = it->first.substr(14);
+    std::string::size_type dotPos = suffix.find('.');
+    if (dotPos == std::string::npos)
+      continue;
+    std::string listenerIndex = suffix.substr(0, dotPos);
+    std::string field = suffix.substr(dotPos + 1);
+    int index = 0;
+    if (!listenerIndex.empty() && listenerIndex[0] >= '0' && listenerIndex[0] <= '9') {
+      std::istringstream iss(listenerIndex);
+      iss >> index;
+    }
+    while (static_cast<std::size_t>(index) >= _server.listeners.size())
+      _server.listeners.push_back(ListenerConfig());
+    if (field == "host")
+      _server.listeners[index].host = stripQuotes(it->second);
+    else if (field == "port")
+      _server.listeners[index].port = get<int>(it->first);
+  }
+
+  if (_server.listeners.empty()) {
+    ListenerConfig fallbackListener;
+    fallbackListener.host = _server.host;
+    fallbackListener.port = _server.port;
+    _server.listeners.push_back(fallbackListener);
+  } else {
+    _server.host = _server.listeners.front().host.empty() ? "0.0.0.0" : _server.listeners.front().host;
+    _server.port = _server.listeners.front().port;
+  }
 
   const std::string serverPrefix = "server.error_page_";
   for (std::map<std::string, std::string>::const_iterator it = _data.begin();

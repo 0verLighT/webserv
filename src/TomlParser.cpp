@@ -40,7 +40,11 @@ bool TomlParser::convertValue(const std::string& value, bool*) {
 std::string TomlParser::convertValue(const std::string& value, std::string*) {
   if (getType(value) != STRING)
     throw std::runtime_error("Value is not a string.");
-  return value;
+
+  std::string trimmed = trim(value, " \t\r\n");
+  if (trimmed.size() >= 2 && trimmed[0] == '"' && trimmed[trimmed.size() - 1] == '"')
+    return trimmed.substr(1, trimmed.size() - 2);
+  return trimmed;
 }
 
 bool TomlParser::isValidLine(const std::string& line) {
@@ -54,19 +58,34 @@ bool TomlParser::isValidTable(const std::string& line) {
 
   if (trimmed.empty() || trimmed[0] != '[')
     return false;
-  size_t closing = trimmed.find(']');
-  if (closing == std::string::npos)
-    return false;
-  if (closing + 1 != trimmed.size())
-    return false;
 
-  std::string tableName = trimmed.substr(1, closing - 1);
-  tableName = trim(tableName, " \t");
+  bool isArrayTable = false;
+  if (trimmed.size() >= 2 && trimmed[0] == '[' && trimmed[1] == '[') {
+    isArrayTable = true;
+    if (trimmed.size() < 4 || trimmed[trimmed.size() - 2] != ']' || trimmed[trimmed.size() - 1] != ']')
+      return false;
+    trimmed = trimmed.substr(2, trimmed.size() - 4);
+  } else {
+    size_t closing = trimmed.find(']');
+    if (closing == std::string::npos || closing + 1 != trimmed.size())
+      return false;
+    trimmed = trimmed.substr(1, closing - 1);
+  }
+
+  std::string tableName = trim(trimmed, " \t");
   if (tableName.empty())
     return false;
 
-  _current_table = tableName;
-  _tmp_key = tableName;
+  if (isArrayTable) {
+    int index = _array_table_counters[tableName];
+    std::ostringstream oss;
+    oss << index;
+    _current_table = tableName + "." + oss.str();
+    _array_table_counters[tableName] = index + 1;
+  } else {
+    _current_table = tableName;
+  }
+  _tmp_key = _current_table;
   _tmp_value = "";
   return true;
 }
