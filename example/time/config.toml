@@ -5,20 +5,4 @@ server_name = "localhost"
 file = "example/time/time.py"
 executor = "/usr/bin/python"
 cgi_enabled = true
-autoindex = true
 timeout = 20000
-root = "html"
-default_error_page = "error.html"
-max_body_size = 1048576
-
-[server.route]
-root = "html"
-methods = ["GET", "POST", "DELETE"]
-autoindex = true
-
-[server.routes."/post"]
-root = "example/post"
-methods = ["GET", "POST"]
-cgi_enabled = true
-cgi_extension = ".py"
-executor = "/usr/bin/python"

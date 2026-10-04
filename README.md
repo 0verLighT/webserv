@@ -58,50 +58,7 @@ After cloning the repository, run `make` at the project's root then execute with
 A configuration file is a TOML document. The server reads a `[server]` table and can also accept nested route settings under `[server.route]`-style sections.
 Named route tables use `[server.routes."/url-prefix"]`; CGI scripts on that route are selected by their configured extension.
 
-```toml
-[server]
-port = 8080
-host = "0.0.0.0"
-server_name = "localhost"
-file = "example/hello_world/hello_world.sh"
-executor = "/usr/bin/bash"
-cgi_enabled = true
-autoindex = true
-timeout = 20000
-root = "html"
-default_error_page = "error.html"
-max_body_size = 1048576
-
-[server.route]
-root = "html"
-methods = ["GET", "POST", "DELETE"]
-autoindex = true
-
-[server.routes."/post"]
-root = "example/post"
-methods = ["GET", "POST"]
-cgi_enabled = true
-cgi_extension = ".sh"
-executor = "/usr/bin/bash"
-```
-
-The server also supports binding to multiple addresses at once with TOML array-table entries:
-
-```toml
-[server]
-root = "html"
-autoindex = true
-
-[[server.listen]]
-host = "127.0.0.1"
-port = 8080
-
-[[server.listen]]
-host = "127.0.0.1"
-port = 8081
-```
-
-When `[[server.listen]]` blocks are present, each entry creates one listening socket in the same poll loop. Single-listener fields `host` and `port` can still be used as a fallback/default configuration.
+The server also supports binding to multiple addresses at once with TOML array-table entries. When `[[server.listen]]` blocks are present, each entry creates one listening socket in the same poll loop. Single-listener fields `host` and `port` can still be used as a fallback/default configuration.
 
 Supported server-level parameters:
 

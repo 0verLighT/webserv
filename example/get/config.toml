@@ -1,0 +1,12 @@
+[server]
+host = "0.0.0.0"
+port = 8080
+root = "example/get"
+autoindex = false
+max_body_size = 1048576
+
+[server.route]
+root = "example/get"
+methods = ["GET"]
+default_file = "GETME.md"
+autoindex = false

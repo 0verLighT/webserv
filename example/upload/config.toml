@@ -1,0 +1,12 @@
+[server]
+host = "0.0.0.0"
+port = 8080
+root = "html"
+autoindex = true
+max_body_size = 1048576
+
+[server.routes."/upload"]
+root = "example/upload"
+methods = ["GET", "POST", "DELETE"]
+upload_path = "example/upload/uploads"
+autoindex = true

@@ -1,0 +1,12 @@
+[server]
+host = "0.0.0.0"
+port = 8080
+root = "example/delete"
+autoindex = false
+max_body_size = 1048576
+
+[server.route]
+root = "example/delete"
+methods = ["GET", "DELETE"]
+default_file = "DELETEME.md"
+autoindex = false
