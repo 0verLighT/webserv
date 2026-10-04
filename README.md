@@ -119,6 +119,11 @@ curl -i -X POST \
 curl -i -X DELETE http://localhost:8080/assets/DELETEME.md
 ```
 
+### Debug
+
+- **bind: Address already in use**\
+List ports with `lsof -i -P -n`, identify PID using the desired port then terminate the process it with `kill <PID>`. **MAKE SURE YOU DON'T TERMINATE ANYTHING IMPORTANT**
+
 ## Resources
 
 - HTTP framing: [RFC 9112](https://www.rfc-editor.org/rfc/rfc9112.html), for message format, body length, chunked encoding, connection handling.
