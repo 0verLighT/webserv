@@ -68,6 +68,7 @@ Server::~Server() {
 // POLLINT -> read request
 // POLLOUT -> write response
 void Server::run() {
+  signal(SIGPIPE, SIG_IGN);
   signal(SIGINT, handlerSignal);
   std::map<int, Client> clients;
   // Catch Crtl + C signal
