@@ -5,7 +5,7 @@ static bool isDir(std::string path) {
   struct stat st;
 
   if (stat(path.c_str(), &st) != 0) {
-    Logger::warn("stat: " + path + ": " + std::string(strerror(errno)));
+    Logger::error("stat: " + path + ": " + std::string(strerror(errno)));
     return false;
   }
   return S_ISDIR(st.st_mode);
@@ -16,11 +16,10 @@ const std::string getExtensionFromPath(const std::string &path) {
   size_t sepPos = path.find_last_of("/\\");
   if (dotPos != std::string::npos && (sepPos == std::string::npos || dotPos > sepPos)) {
     std::string ext = path.substr(dotPos);
-    // Logger::debug(ext);
     return ext;
   }
   if (!isDir(path))
-    Logger::error("File has no extension");
+    Logger::warn("File has no extension");
   return "";
 }
 

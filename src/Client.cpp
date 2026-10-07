@@ -163,6 +163,4 @@ int Client::closeConnection() {
   return close(_socket);
 }
 
-Client::~Client() {
-  Logger::info("Client : " + to_string(_socket) + " was destroyed");
-}
+Client::~Client() {}

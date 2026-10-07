@@ -92,7 +92,6 @@ void HttpRequest::parseRequest(std::string buffer) {
   size_t headerEnd = buffer.find("\r\n");
   if (headerEnd != std::string::npos) {
     std::string firstLine = buffer.substr(0, headerEnd);
-    // Logger::info(firstLine);
 
     _httpVersion = parseHttpVersion(firstLine);
     _method = parseMethod(firstLine);
@@ -171,8 +170,6 @@ std::map<std::string, std::string> HttpRequest::parseHeaders(std::string req) co
       }
       std::transform(key.begin(), key.end(), key.begin(), ::tolower);
       headers[key] = value;
-      // Logger::info(key);
-      // Logger::info(value);
     }
     req = req.substr(pos + 2);
   }
@@ -209,7 +206,6 @@ std::string HttpRequest::parsePathWithQueries(std::string req) {
     }
     size_t hasQueries = decoded.find("?");
     if (hasQueries != std::string::npos) {
-    //   Logger::info("Query detected");
       path = decoded.substr(0, hasQueries);
       _queryString = pathWithQueries.substr(pathWithQueries.find("?") + 1);
       _queries = parseQueries(decoded, hasQueries);
@@ -238,7 +234,6 @@ std::map<std::string, std::string> HttpRequest::parseQueries(std::string decoded
       std::string key = keyAndValue.substr(0, eqPos);
       std::string value = keyAndValue.substr(eqPos + 1);
       queriesMap[key] = value;
-      Logger::info("key : " + key + " Value : " + value);
     } else if (!keyAndValue.empty()) {
       queriesMap[keyAndValue] = "";
     }

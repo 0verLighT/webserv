@@ -120,7 +120,6 @@ void Server::run() {
         break;
     }
     if (ret == 0) {
-      Logger::info("poll : timeout");
       continue;
     }
 
@@ -182,7 +181,6 @@ void Server::run() {
           Client newClient(newClientFd, remoteAddressText, maxRequestSize,
             _config.server().max_body_size, _config.server().timeout);
           clients[newClientFd] = newClient;
-          Logger::info("New client connected: " + to_string(newClientFd));
         } else {
           int clientSock = pollFds[i].fd;
           int isAlive = clients[clientSock].readRequest();
@@ -190,7 +188,6 @@ void Server::run() {
             clients[clientSock].closeConnection();
             clientsToRemove.push_back(clientSock);
           }
-          Logger::info("Request read from client: " + to_string(clientSock));
         }
       }
       if (pollFds[i].revents & POLLOUT) {
@@ -215,7 +212,7 @@ void Server::run() {
             if (clients[clientSocket].cgiSucceeded())
               handler.handleCgiOutput(clients[clientSocket].getCgi().getOutput()).sendHttpResponse();
             else {
-              Logger::warn("CGI execution failed (502 - Bad Gateway)");
+              Logger::error("CGI execution failed (502 - Bad Gateway)");
               throw HttpException(HttpStatus::BAD_GATEWAY, clientSocket);
             }
           } else if (handler.prepareCgi(clients[clientSocket].getCgi())) {
@@ -238,6 +235,5 @@ void Server::run() {
     for (std::vector<int>::iterator it = clientsToRemove.begin(); it != clientsToRemove.end(); ++it) {
       clients.erase(*it);
     }
-    // Logger::info("Cycle Event Loop");
   }
 }

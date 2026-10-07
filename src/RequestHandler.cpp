@@ -51,15 +51,12 @@ void RequestHandler::handleMethod() {
   HttpResponse res("", HttpStatus::METHOD_NOT_ALLOWED, this->_socket, "text/plain");
   switch (static_cast<int>(this->_req.getMethod())) {
     case HttpMethod::GET :
-      // Logger::debug("GET : " + to_string(this->_req.getMethod()));
       res = handleGet(this->_config);
       break;
     case HttpMethod::POST:
-      // Logger::debug("POST : " + to_string(this->_req.getMethod()));
       res = handlePost();
       break;
     case HttpMethod::DELETE:
-      // Logger::debug("DELETE : " + to_string(this->_req.getMethod()));
       res = handleDelete();
       break;
     default:
@@ -249,7 +246,7 @@ HttpResponse RequestHandler::handleGet(const Config& config) {
     const std::string uri = _req.getPath();
     if (uri.empty() || uri[uri.size() - 1] != '/') {
       std::string location = uri + "/";
-      Logger::debug("Redirecting to " + location);
+      Logger::info("Redirecting to " + location);
       const std::string query = _req.getQueryString();
       if (!query.empty())
         location += "?" + query;
@@ -278,22 +275,23 @@ HttpResponse RequestHandler::handleGet(const Config& config) {
   struct stat st;
   if (stat(path.c_str(), &st) == -1) {
     if (errno == EACCES) {
-      // Logger::debug("Forbidden: " + path);
+      Logger::warn("Forbidden: " + path);
       throw Forbidden(_socket);
     }
-    // Logger::debug("File not found: " + path);
+    Logger::warn("File not found: " + path);
     throw NotFound(_socket);
   }
 
   std::ifstream file(path.c_str());
 
   if (!file.is_open()) {
-    // Logger::debug("File not found: " + path);
+    Logger::error("File not found: " + path);
     throw Forbidden(_socket);
   }
 
   std::stringstream body;
   body << file.rdbuf();
+  Logger::info("GET to " + _req.getPath());
   return HttpResponse(body.str(), HttpStatus::OK, _socket, getContentTypeOfPath(path));
 }
 
@@ -401,11 +399,11 @@ HttpResponse RequestHandler::handlePost() {
   if (!output.good())
     throw InternalServerError(_socket);
   output.close();
+  Logger::info("POST to " + destination);
   return HttpResponse("Uploaded " + filename, HttpStatus::CREATED, _socket, "text/plain");
 }
 
 HttpResponse RequestHandler::handleDelete() {
-  // Logger::debug("Handling DELETE " + _req.getPath());
   std::string path = resolvePath(_req.getPath());
 
   if (access(path.c_str(), F_OK) == 0) {
@@ -417,14 +415,17 @@ HttpResponse RequestHandler::handleDelete() {
     }
 
     int status = std::remove(path.c_str());
-    if (status != 0)
+    if (status != 0) {
+      Logger::error("Internal Server Error at : " + _req.getPath());
       throw InternalServerError(_socket);
+    }
   }
   else {
     Logger::warn("File `" + _req.getPath() + "` not found");
     throw NotFound(_socket);
   }
 
+  Logger::warn("No content in " + _req.getPath());
   throw NoContent(_socket);
 }
 
@@ -631,7 +632,5 @@ const std::string& RequestHandler::getContentTypeOfPath(std::string path) const 
     return it->second;
   return defaultType;
 }
-
-
 
 RequestHandler::~RequestHandler() {}
