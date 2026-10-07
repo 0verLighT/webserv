@@ -16,7 +16,7 @@ DEPS = $(addprefix $(BUILD_DIR), $(SOURCES:.cpp=.d))
 all: $(NAME)
 
 $(NAME): $(OBJS)
-	$(CXX) $(LDFLAGS) $(OBJS) -o $(NAME)
+	$(CXX) $(OBJS) -o $(NAME)
 
 $(BUILD_DIR)%.o : %.cpp
 	mkdir -p $(dir $@)

@@ -240,14 +240,23 @@ HttpResponse RequestHandler::handleCgiOutput(const std::string& output) {
 
 HttpResponse RequestHandler::handleGet(const Config& config) {
     std::string path = resolvePath(_req.getPath());
-    // Existing static-file logic
-//   Logger::info(path);
   if (_req.getPath().find("..") != std::string::npos) {
     throw Forbidden(_socket);
   }
   const Config::RouteConfig* route = matchRoute(config, _req.getPath());
   bool autoindex = route != NULL ? route->autoindex : config.server().autoindex;
   if (isDirectory(path)) {
+    const std::string uri = _req.getPath();
+    if (uri.empty() || uri[uri.size() - 1] != '/') {
+      std::string location = uri + "/";
+      Logger::debug("Redirecting to " + location);
+      const std::string query = _req.getQueryString();
+      if (!query.empty())
+        location += "?" + query;
+      std::vector<std::pair<std::string, std::string> > headers(1, std::make_pair("Location", location));
+      return HttpResponse("", HttpStatus::MOVED_PERMANENTLY, _socket, "text/html", headers);
+    }
+    
     if (route != NULL && !route->default_file.empty()) {
       std::string defaultPath = route->default_file[0] == '/' ? route->default_file : path + "/" + route->default_file;
       struct stat defaultStat;

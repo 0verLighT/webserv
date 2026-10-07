@@ -66,7 +66,7 @@ const std::string& generateAutoindexPage(std::string path) {
   autoindex += "<body>";
   autoindex += "<img src=\"/assets/blahaj.png\" alt=\"blahaj\">";
   autoindex += "<p>webserv HTTP/1.1</p><h1>Index of " + path.substr(1) + "</h1><table>";
-  autoindex += "<tr><th>Filename</th><th>Size</th><th>Permissions</th><th>Last modified</th></tr>";
+  autoindex += "<tr><th>Filename</th><th>Size</th><th>Last modified</th></tr>";
   struct dirent* entry;
   struct stat st;
   while ((entry = readdir(dir)) != NULL) {
@@ -80,7 +80,6 @@ const std::string& generateAutoindexPage(std::string path) {
     fullPath += entry->d_name;
 
     std::string sizeFile = "-";
-    std::string permsFile = "-";
     std::string lastEditFile = "-";
 
     if (stat(fullPath.c_str(), &st) == 0) {
@@ -106,7 +105,6 @@ const std::string& generateAutoindexPage(std::string path) {
       autoindex += "</td>";
     }
     autoindex += "<td>" + sizeFile + "</td>";
-    autoindex += "<td>" + permsFile + "</td>";
     autoindex += "<td>" + lastEditFile + "</td>";
     autoindex += "</tr>";
   }
