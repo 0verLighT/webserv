@@ -1,0 +1,327 @@
+#include "Config.hpp"
+
+std::string Config::trim(const std::string& value) {
+  std::string::size_type start = value.find_first_not_of(" \t\r\n");
+  if (start == std::string::npos)
+    return "";
+  std::string::size_type end = value.find_last_not_of(" \t\r\n");
+  return value.substr(start, end - start + 1);
+}
+
+std::string Config::stripQuotes(const std::string& value) {
+  std::string trimmed = trim(value);
+  if (trimmed.size() >= 2 && trimmed[0] == '"' && trimmed[trimmed.size() - 1] == '"')
+    return trimmed.substr(1, trimmed.size() - 2);
+  return trimmed;
+}
+
+std::vector<std::string> Config::splitList(const std::string& value) {
+  std::vector<std::string> items;
+  std::string cleaned = trim(value);
+  if (cleaned.size() >= 2 && cleaned[0] == '[' && cleaned[cleaned.size() - 1] == ']')
+    cleaned = cleaned.substr(1, cleaned.size() - 2);
+  std::string current;
+  for (std::string::size_type i = 0; i < cleaned.size(); ++i) {
+    if (cleaned[i] == ',') {
+      std::string item = trim(current);
+      if (!item.empty())
+        items.push_back(stripQuotes(item));
+      current.clear();
+      continue;
+    }
+    if (cleaned[i] == ' ' || cleaned[i] == '\t' || cleaned[i] == '\n' || cleaned[i] == '\r')
+      continue;
+    current += cleaned[i];
+  }
+  std::string item = trim(current);
+  if (!item.empty())
+    items.push_back(stripQuotes(item));
+  return items;
+}
+
+Config::Config(const TomlParser& parser): _data(parser.getData()) {
+  parseServerConfig();
+  parseRouteConfig();
+}
+
+const Config::ServerConfig& Config::server() const {
+  return _server;
+}
+
+const std::vector<Config::RouteConfig>& Config::routes() const {
+  return _server.routes;
+}
+
+const Config::RouteConfig* Config::route(const std::string& path) const {
+  for (std::vector<RouteConfig>::const_iterator it = _server.routes.begin();
+       it != _server.routes.end(); ++it) {
+    if (it->path == path)
+      return &(*it);
+  }
+  return NULL;
+}
+
+const Config::RouteConfig* Config::routeForPath(const std::string& requestPath) const {
+  const RouteConfig* bestMatch = NULL;
+  std::string::size_type bestLength = 0;
+  for (std::vector<RouteConfig>::const_iterator it = _server.routes.begin();
+       it != _server.routes.end(); ++it) {
+    std::string routePath = it->path;
+    while (routePath.size() > 1 && routePath[routePath.size() - 1] == '/')
+      routePath.erase(routePath.size() - 1);
+    bool matches = routePath == "/" || requestPath == routePath ||
+      (requestPath.compare(0, routePath.size(), routePath) == 0 &&
+       requestPath.size() > routePath.size() && requestPath[routePath.size()] == '/');
+    if (matches && routePath.size() > bestLength) {
+      bestMatch = &(*it);
+      bestLength = routePath.size();
+    }
+  }
+  return bestMatch;
+}
+
+std::string Config::errorPage(int status, const std::string& requestPath) const {
+  const RouteConfig* matchedRoute = NULL;
+  std::string::size_type matchedLength = 0;
+  for (std::vector<RouteConfig>::const_iterator it = _server.routes.begin();
+       it != _server.routes.end(); ++it) {
+    std::string routePath = it->path;
+    while (routePath.size() > 1 && routePath[routePath.size() - 1] == '/')
+      routePath.erase(routePath.size() - 1);
+    bool matches = routePath == "/" || requestPath == routePath ||
+      (requestPath.compare(0, routePath.size(), routePath) == 0 &&
+       requestPath.size() > routePath.size() && requestPath[routePath.size()] == '/');
+    if (matches && routePath.size() > matchedLength) {
+      matchedRoute = &(*it);
+      matchedLength = routePath.size();
+    }
+  }
+
+  if (matchedRoute != NULL) {
+    std::map<int, std::string>::const_iterator routeError = matchedRoute->error_pages.find(status);
+    if (routeError != matchedRoute->error_pages.end())
+      return routeError->second;
+  }
+
+  std::map<int, std::string>::const_iterator serverError = _server.error_pages.find(status);
+  if (serverError != _server.error_pages.end())
+    return serverError->second;
+  if (matchedRoute != NULL && !matchedRoute->default_error_page.empty())
+    return matchedRoute->default_error_page;
+  return _server.default_error_page;
+}
+
+void Config::parseServerConfig() {
+  _server.autoindex = _data.find("server.autoindex") != _data.end() ? get<bool>("server.autoindex") : (_data.find("autoindex") != _data.end() ? get<bool>("autoindex") : true);
+  _server.cgi_enabled = _data.find("server.cgi_enabled") != _data.end() ? get<bool>("server.cgi_enabled") : (_data.find("cgi_enabled") != _data.end() ? get<bool>("cgi_enabled") : true);
+  _server.root = _data.find("server.root") != _data.end() ? stripQuotes(_data.find("server.root")->second) : (_data.find("root") != _data.end() ? stripQuotes(_data.find("root")->second) : "");
+  _server.port = _data.find("server.port") != _data.end() ? get<int>("server.port") : (_data.find("port") != _data.end() ? get<int>("port") : 8080);
+  _server.host = _data.find("server.host") != _data.end() ? stripQuotes(get<std::string>("server.host")) : (_data.find("host") != _data.end() ? stripQuotes(get<std::string>("host")) : "0.0.0.0");
+  _server.server_name = _data.find("server.server_name") != _data.end() ? stripQuotes(get<std::string>("server.server_name")) : (_data.find("server_name") != _data.end() ? stripQuotes(get<std::string>("server_name")) : "localhost");
+  _server.file = _data.find("server.file") != _data.end() ? stripQuotes(_data.find("server.file")->second) : (_data.find("file") != _data.end() ? stripQuotes(_data.find("file")->second) : "");
+  _server.executor = _data.find("server.executor") != _data.end() ? stripQuotes(_data.find("server.executor")->second) : (_data.find("executor") != _data.end() ? stripQuotes(_data.find("executor")->second) : "");
+  _server.timeout = _data.find("server.timeout") != _data.end() ? get<int>("server.timeout") : (_data.find("timeout") != _data.end() ? get<int>("timeout") : 5000);
+  _server.default_error_page = _data.find("server.default_error_page") != _data.end() ? stripQuotes(_data.find("server.default_error_page")->second) : (_data.find("default_error_page") != _data.end() ? stripQuotes(_data.find("default_error_page")->second) : "");
+  _server.max_body_size = _data.find("server.max_body_size") != _data.end() ? static_cast<std::size_t>(get<int>("server.max_body_size")) : (_data.find("max_body_size") != _data.end() ? static_cast<std::size_t>(get<int>("max_body_size")) : 1048576);
+
+  for (std::map<std::string, std::string>::const_iterator it = _data.begin(); it != _data.end(); ++it) {
+    if (it->first.compare(0, 14, "server.listen.") != 0)
+      continue;
+    std::string suffix = it->first.substr(14);
+    std::string::size_type dotPos = suffix.find('.');
+    if (dotPos == std::string::npos)
+      continue;
+    std::string listenerIndex = suffix.substr(0, dotPos);
+    std::string field = suffix.substr(dotPos + 1);
+    int index = 0;
+    if (!listenerIndex.empty() && listenerIndex[0] >= '0' && listenerIndex[0] <= '9') {
+      std::istringstream iss(listenerIndex);
+      iss >> index;
+    }
+    while (static_cast<std::size_t>(index) >= _server.listeners.size())
+      _server.listeners.push_back(ListenerConfig());
+    if (field == "host")
+      _server.listeners[index].host = stripQuotes(it->second);
+    else if (field == "port")
+      _server.listeners[index].port = get<int>(it->first);
+  }
+
+  if (_server.listeners.empty()) {
+    ListenerConfig fallbackListener;
+    fallbackListener.host = _server.host;
+    fallbackListener.port = _server.port;
+    _server.listeners.push_back(fallbackListener);
+  } else {
+    _server.host = _server.listeners.front().host.empty() ? "0.0.0.0" : _server.listeners.front().host;
+    _server.port = _server.listeners.front().port;
+  }
+
+  const std::string serverPrefix = "server.error_page_";
+  for (std::map<std::string, std::string>::const_iterator it = _data.begin();
+       it != _data.end(); ++it) {
+    if (it->first.compare(0, serverPrefix.size(), serverPrefix) != 0)
+      continue;
+    std::string statusText = it->first.substr(serverPrefix.size());
+    if (!isInt(statusText))
+      throw std::runtime_error("Invalid error page status: " + statusText);
+    int status = toInt(statusText);
+    if (status < 400 || status > 599)
+      throw std::runtime_error("Error page status must be between 400 and 599.");
+    _server.error_pages[status] = stripQuotes(it->second);
+  }
+
+  bool hasExplicitRoute = false;
+  for (std::map<std::string, std::string>::const_iterator it = _data.begin();
+       it != _data.end(); ++it) {
+    if (it->first.find("server.route.") == 0) {
+      hasExplicitRoute = true;
+      break;
+    }
+  }
+
+  if (!hasExplicitRoute) {
+    RouteConfig rootRoute;
+    rootRoute.autoindex = _server.autoindex;
+    rootRoute.directory_listing = true;
+    rootRoute.cgi_enabled = _server.cgi_enabled;
+    rootRoute.path = "/";
+    rootRoute.root = _server.root.empty() ? "html" : _server.root;
+    rootRoute.default_file = "";
+    rootRoute.upload_path = "";
+    rootRoute.redirect = "";
+    rootRoute.cgi_extension = "";
+    rootRoute.default_error_page = _server.default_error_page;
+    rootRoute.max_body_size = _server.max_body_size;
+    rootRoute.methods.push_back("GET");
+    rootRoute.methods.push_back("POST");
+    rootRoute.methods.push_back("DELETE");
+    _server.routes.push_back(rootRoute);
+  }
+}
+
+void Config::parseRouteConfig() {
+  std::map<std::string, std::string>::const_iterator rootIt = _data.find("server.route.root");
+  std::map<std::string, std::string>::const_iterator methodsIt = _data.find("server.route.methods");
+  std::map<std::string, std::string>::const_iterator autoindexIt = _data.find("server.route.autoindex");
+  std::map<std::string, std::string>::const_iterator defaultFileIt = _data.find("server.route.default_file");
+  std::map<std::string, std::string>::const_iterator uploadIt = _data.find("server.route.upload_path");
+  std::map<std::string, std::string>::const_iterator redirectIt = _data.find("server.route.redirect");
+  std::map<std::string, std::string>::const_iterator cgiEnabledIt = _data.find("server.route.cgi_enabled");
+  std::map<std::string, std::string>::const_iterator cgiExtIt = _data.find("server.route.cgi_extension");
+  std::map<std::string, std::string>::const_iterator executorIt = _data.find("server.route.executor");
+  std::map<std::string, std::string>::const_iterator errPageIt = _data.find("server.route.default_error_page");
+  std::map<std::string, std::string>::const_iterator maxBodyIt = _data.find("server.route.max_body_size");
+
+  if (rootIt != _data.end() || methodsIt != _data.end() || autoindexIt != _data.end() ||
+      defaultFileIt != _data.end() || uploadIt != _data.end() || redirectIt != _data.end() ||
+      cgiEnabledIt != _data.end() || cgiExtIt != _data.end() || errPageIt != _data.end() ||
+      executorIt != _data.end() || maxBodyIt != _data.end()) {
+    RouteConfig route;
+    route.path = "/";
+    route.root = rootIt != _data.end() ? stripQuotes(rootIt->second) : (_server.root.empty() ? "html" : _server.root);
+    route.autoindex = autoindexIt != _data.end() ? get<bool>("server.route.autoindex") : _server.autoindex;
+    route.directory_listing = true;
+    route.default_file = defaultFileIt != _data.end() ? stripQuotes(defaultFileIt->second) : "";
+    route.upload_path = uploadIt != _data.end() ? stripQuotes(uploadIt->second) : "";
+    route.redirect = redirectIt != _data.end() ? stripQuotes(redirectIt->second) : "";
+    route.methods = methodsIt != _data.end() ? splitList(methodsIt->second) : std::vector<std::string>();
+    if (route.methods.empty()) {
+      route.methods.push_back("GET");
+      route.methods.push_back("POST");
+      route.methods.push_back("DELETE");
+    }
+    route.cgi_enabled = cgiEnabledIt != _data.end() ? get<bool>("server.route.cgi_enabled") : _server.cgi_enabled;
+    route.cgi_extension = cgiExtIt != _data.end() ? stripQuotes(cgiExtIt->second) : "";
+    route.executor = executorIt != _data.end() ? stripQuotes(executorIt->second) : "";
+    route.default_error_page = errPageIt != _data.end() ? stripQuotes(errPageIt->second) : _server.default_error_page;
+    route.max_body_size = maxBodyIt != _data.end() ? static_cast<std::size_t>(get<int>("server.route.max_body_size")) : _server.max_body_size;
+    _server.routes.push_back(route);
+  }
+
+  const std::string routePrefix = "server.routes.";
+  std::map<std::string, RouteConfig> namedRoutes;
+  for (std::map<std::string, std::string>::const_iterator it = _data.begin();
+       it != _data.end(); ++it) {
+    if (it->first.compare(0, routePrefix.size(), routePrefix) != 0)
+      continue;
+    std::string::size_type quoteStart = routePrefix.size();
+    if (quoteStart >= it->first.size() || it->first[quoteStart] != '"')
+      continue;
+    std::string::size_type quoteEnd = it->first.find('"', quoteStart + 1);
+    if (quoteEnd == std::string::npos || quoteEnd + 1 >= it->first.size() ||
+        it->first[quoteEnd + 1] != '.')
+      continue;
+
+    std::string routePath = stripQuotes(it->first.substr(quoteStart, quoteEnd - quoteStart + 1));
+    std::string setting = it->first.substr(quoteEnd + 2);
+    if (routePath.empty() || routePath[0] != '/')
+      throw std::runtime_error("Route path must start with '/': " + routePath);
+
+    std::map<std::string, RouteConfig>::iterator routeIt = namedRoutes.find(routePath);
+    if (routeIt == namedRoutes.end()) {
+      RouteConfig newRoute;
+      newRoute.path = routePath;
+      newRoute.root = _server.root.empty() ? "html" : _server.root;
+      newRoute.autoindex = _server.autoindex;
+      newRoute.cgi_enabled = _server.cgi_enabled;
+      newRoute.default_error_page = _server.default_error_page;
+      newRoute.max_body_size = _server.max_body_size;
+      namedRoutes.insert(std::make_pair(routePath, newRoute));
+      routeIt = namedRoutes.find(routePath);
+    }
+    RouteConfig& route = routeIt->second;
+
+    if (setting == "root")
+      route.root = stripQuotes(it->second);
+    else if (setting == "methods")
+      route.methods = splitList(it->second);
+    else if (setting == "autoindex")
+      route.autoindex = convertValue<bool>(it->second);
+    else if (setting == "default_file")
+      route.default_file = stripQuotes(it->second);
+    else if (setting == "upload_path")
+      route.upload_path = stripQuotes(it->second);
+    else if (setting == "redirect")
+      route.redirect = stripQuotes(it->second);
+    else if (setting == "cgi_enabled")
+      route.cgi_enabled = convertValue<bool>(it->second);
+    else if (setting == "cgi_extension")
+      route.cgi_extension = stripQuotes(it->second);
+    else if (setting == "executor")
+      route.executor = stripQuotes(it->second);
+    else if (setting == "default_error_page")
+      route.default_error_page = stripQuotes(it->second);
+    else if (setting == "max_body_size")
+      route.max_body_size = static_cast<std::size_t>(convertValue<int>(it->second));
+    else if (setting.compare(0, 11, "error_page_") == 0) {
+      std::string statusText = setting.substr(11);
+      if (!isInt(statusText))
+        throw std::runtime_error("Invalid route error page status: " + statusText);
+      int status = toInt(statusText);
+      if (status < 400 || status > 599)
+        throw std::runtime_error("Route error page status must be between 400 and 599.");
+      route.error_pages[status] = stripQuotes(it->second);
+    }
+  }
+
+  for (std::map<std::string, RouteConfig>::const_iterator it = namedRoutes.begin();
+       it != namedRoutes.end(); ++it)
+    _server.routes.push_back(it->second);
+}
+
+bool Config::has(const std::string& key) const {
+  std::map<std::string, std::string>::const_iterator it = _data.find(key);
+  if (it != _data.end())
+    return true;
+  std::string fallbackKey = key;
+  std::string::size_type dotPos = fallbackKey.rfind('.');
+  if (dotPos != std::string::npos)
+    fallbackKey = fallbackKey.substr(dotPos + 1);
+  for (std::map<std::string, std::string>::const_iterator it2 = _data.begin();
+       it2 != _data.end(); ++it2) {
+    std::string::size_type pos = it2->first.rfind('.');
+    if (pos != std::string::npos && it2->first.substr(pos + 1) == fallbackKey)
+      return true;
+  }
+  return false;
+}

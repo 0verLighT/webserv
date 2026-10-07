@@ -1,18 +1,19 @@
 #pragma once
 
-#include "TomlParserExecption.hpp"
+#include "TomlParserException.hpp"
 #include "utils.hpp"
 #include <iostream>
 #include <sstream>
 #include <fstream>
 #include <map>
-#include "utils.hpp"
 
 class TomlParser {
   private:
     std::string _input;
     std::string _tmp_key;
     std::string _tmp_value;
+    std::string _current_table;
+    std::map<std::string, int> _array_table_counters;
     std::map<std::string, std::string>	_data;
 
   public:
@@ -35,12 +36,7 @@ class TomlParser {
       std::map<std::string, std::string>::iterator it = _data.find(key);
       if (it == _data.end())
         throw std::runtime_error("Value not found.");
-      try {
-        return convertValue<T>(it->second);
-      }
-      catch (const std::exception& e) {
-        throw;
-      }
+      return convertValue<T>(it->second);
     }
 
     bool isValidLine(const std::string& line);
@@ -52,17 +48,22 @@ class TomlParser {
 
     template <typename T>
     T convertValue(const std::string& value) {
-      switch (getType(value)) {
-        case INT: return (toInt(value));
-        case FLOAT: return (toFloat(value));
-        case BOOL: return (toBool(value));
-        case STRING: return (value);
-        default: throw std::runtime_error("Impossible value conversion.");
-      }
+      return convertValue(value, static_cast<T*>(0));
     }
+    template <typename T>
+    T convertValue(const std::string& value, T*) {
+      (void)value;
+      throw std::runtime_error("Unsupported conversion type.");
+    }
+    int convertValue(const std::string& value, int*);
+    float convertValue(const std::string& value, float*);
+    bool convertValue(const std::string& value, bool*);
+    std::string convertValue(const std::string& value, std::string*);
 
     void processInputFile(const std::string filepath);
     void printData(void);
+
+    const std::map<std::string, std::string>& getData(void) const;
 
     class InvalidFile: public TomlParserException {
       virtual const char *what(void) const throw();

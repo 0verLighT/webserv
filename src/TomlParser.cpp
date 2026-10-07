@@ -15,6 +15,38 @@ TomlParser::ValueType TomlParser::getType(const std::string& var) {
     return (STRING);
 }
 
+const std::map<std::string, std::string>& TomlParser::getData(void) const {
+  return _data;
+}
+
+int TomlParser::convertValue(const std::string& value, int*) {
+  if (getType(value) != INT)
+    throw std::runtime_error("Value is not an integer.");
+  return toInt(value);
+}
+
+float TomlParser::convertValue(const std::string& value, float*) {
+  if (getType(value) != FLOAT)
+    throw std::runtime_error("Value is not a float.");
+  return toFloat(value);
+}
+
+bool TomlParser::convertValue(const std::string& value, bool*) {
+  if (getType(value) != BOOL)
+    throw std::runtime_error("Value is not a boolean.");
+  return toBool(value);
+}
+
+std::string TomlParser::convertValue(const std::string& value, std::string*) {
+  if (getType(value) != STRING)
+    throw std::runtime_error("Value is not a string.");
+
+  std::string trimmed = trim(value, " \t\r\n");
+  if (trimmed.size() >= 2 && trimmed[0] == '"' && trimmed[trimmed.size() - 1] == '"')
+    return trimmed.substr(1, trimmed.size() - 2);
+  return trimmed;
+}
+
 bool TomlParser::isValidLine(const std::string& line) {
   return (isValidPair(line) || isValidTable(line));
 }
@@ -24,12 +56,38 @@ bool TomlParser::isValidTable(const std::string& line) {
   trimmed.erase(0, trimmed.find_first_not_of(" \t"));
   trimmed.erase(trimmed.find_last_not_of(" \t") + 1);
 
-  size_t op = line.find_first_of('[');
-  size_t ed = line.find(']', op);
+  if (trimmed.empty() || trimmed[0] != '[')
+    return false;
 
-  if (op == std::string::npos || ed == std::string::npos ||line[ed + 1])
-    throw InvalidFile();
-  return (true);
+  bool isArrayTable = false;
+  if (trimmed.size() >= 2 && trimmed[0] == '[' && trimmed[1] == '[') {
+    isArrayTable = true;
+    if (trimmed.size() < 4 || trimmed[trimmed.size() - 2] != ']' || trimmed[trimmed.size() - 1] != ']')
+      return false;
+    trimmed = trimmed.substr(2, trimmed.size() - 4);
+  } else {
+    size_t closing = trimmed.find(']');
+    if (closing == std::string::npos || closing + 1 != trimmed.size())
+      return false;
+    trimmed = trimmed.substr(1, closing - 1);
+  }
+
+  std::string tableName = trim(trimmed, " \t");
+  if (tableName.empty())
+    return false;
+
+  if (isArrayTable) {
+    int index = _array_table_counters[tableName];
+    std::ostringstream oss;
+    oss << index;
+    _current_table = tableName + "." + oss.str();
+    _array_table_counters[tableName] = index + 1;
+  } else {
+    _current_table = tableName;
+  }
+  _tmp_key = _current_table;
+  _tmp_value = "";
+  return true;
 }
 
 bool TomlParser::isValidPair(const std::string& line) {
@@ -37,12 +95,15 @@ bool TomlParser::isValidPair(const std::string& line) {
   trimmed.erase(0, trimmed.find_first_not_of(" \t"));
   trimmed.erase(trimmed.find_last_not_of(" \t") + 1);
 
+  if (trimmed.empty() || trimmed[0] == '[')
+    return false;
+
   std::string key;
   std::string value;
   size_t eqPos = trimmed.find('=');
 
   if (eqPos == std::string::npos)
-    throw InvalidFile();
+    return (false);
 
   key = trimmed.substr(0, eqPos);
   value = trimmed.substr(eqPos + 1);
@@ -53,19 +114,19 @@ bool TomlParser::isValidPair(const std::string& line) {
   value.erase(value.find_last_not_of(" \t") + 1);
 
   if (!(isValidKey(key) && isValidValue(value)))
-    throw InvalidFile();
+    return (false);
 
-  _tmp_key = key;
+  _tmp_key = _current_table.empty() ? key : _current_table + "." + key;
   _tmp_value = value;
   return (true);
 }
 
 bool TomlParser::isValidKey(const std::string& key) {
   if (isDuplicate(key))
-    throw DuplicateKey();
+    return (false);
 
   if (key.empty())
-    throw InvalidKey();
+    return (false);
 
   int qcount = 0;
   for (size_t i = 0; i < key.size(); i++)
@@ -74,14 +135,17 @@ bool TomlParser::isValidKey(const std::string& key) {
       qcount += 1;
   }
   if (qcount > 2 || qcount == 1)
-    throw InvalidKey();
+    return (false);
 
   return (true);
 }
 
 bool TomlParser::isValidValue(const std::string& value) {
   if (value.empty())
-    throw InvalidValue();
+    return (false);
+
+  if (value[0] == '[' && value[value.size() - 1] == ']')
+    return true;
 
   int qcount = 0;
   for (size_t i = 0; i < value.size(); i++)
@@ -90,7 +154,7 @@ bool TomlParser::isValidValue(const std::string& value) {
       qcount += 1;
   }
   if (qcount != 2 && (!(isBool(value) || isInt(value) || isFloat(value))))
-    throw InvalidValue();
+    return (false);
 
   return (true);
 }
@@ -110,8 +174,12 @@ void TomlParser::processInputFile(const std::string filepath) {
   {
     if (startsWith(line, "#") || line.empty())
       continue;
-    if (isValidLine(line))
+    if (isValidTable(line))
+      continue;
+    if (isValidPair(line))
       _data[_tmp_key] = _tmp_value;
+    else
+      throw InvalidFile();
   }
   file.close();
 }
@@ -138,5 +206,3 @@ const char *TomlParser::InvalidKey::what(void) const throw() {
 const char *TomlParser::InvalidValue::what(void) const throw() {
   return ("Invalid value format.");
 }
-
-

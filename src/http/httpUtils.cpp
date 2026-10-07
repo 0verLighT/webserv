@@ -44,7 +44,7 @@ std::string getSentenceResponseHttpStatus(HttpStatus::Code status) {
     case HttpStatus::UPGRADE_REQUIRED: return "Upgrade Required";
     case HttpStatus::INTERNAL_SERVER_ERROR: return "Internal Server Error";
     case HttpStatus::BAD_GATEWAY: return "Bad Gateway";
-    case HttpStatus::SERVICE_UNAVIABLE: return "Service Unavailable";
+    case HttpStatus::SERVICE_UNAVAILABLE: return "Service Unavailable";
     case HttpStatus::GATEWAY_TIMEOUT: return "Gateway Timeout";
     case HttpStatus::HTTP_VERSION_NOT_SUPPORTED: return "Http Version Not Supported";
     default: return "Unknown Status";
@@ -65,7 +65,7 @@ const std::string& generateAutoindexPage(std::string path) {
   autoindex += "font-weight: normal; text-align: left}</style></head>";
   autoindex += "<body>";
   autoindex += "<img src=\"/assets/blahaj.png\" alt=\"blahaj\">";
-  autoindex += "<p>webserv HTTP/1.1</p><h1>Index of " + path.substr(2) + "</h1><table>";
+  autoindex += "<p>webserv HTTP/1.1</p><h1>Index of " + path.substr(1) + "</h1><table>";
   autoindex += "<tr><th>Filename</th><th>Size</th><th>Permissions</th><th>Last modified</th></tr>";
   struct dirent* entry;
   struct stat st;
@@ -74,7 +74,7 @@ const std::string& generateAutoindexPage(std::string path) {
     if (strcmp(entry->d_name, ".") == 0 || (strcmp(entry->d_name, "..") == 0 && path == "./html/"))
       continue;
     std::string fullPath = path;
-    
+
     if (!fullPath.empty() && fullPath[fullPath.size() - 1] != '/')
       fullPath += "/";
     fullPath += entry->d_name;

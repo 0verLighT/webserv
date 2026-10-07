@@ -7,6 +7,9 @@
 #include <iostream>
 #include <limits>
 #include <cmath>
+#include "sys/stat.h"
+#include <cstring>
+#include <errno.h>
 
 bool	isInt(const std::string& valueString);
 bool	isFloat(const std::string& valueString);
@@ -24,7 +27,7 @@ static std::string to_string(const T& value) {
   return oss.str();
 }
 
-const std::string getExtenstionFormPath(const std::string &path);
+const std::string getExtensionFromPath(const std::string &path);
 bool startsWith(const std::string& s, const std::string& prefix);
 bool endsWith(const std::string& s, const std::string& suffix);
 std::string trim(const std::string& s, const std::string& rm);

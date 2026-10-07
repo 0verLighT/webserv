@@ -1,0 +1,14 @@
+[server]
+root = "html"
+autoindex = true
+
+[[server.listen]]
+host = "0.0.0.0"
+port = 8080
+
+[[server.listen]]
+host = "0.0.0.0"
+port = 8081
+
+[server.route]
+default_file = "index.html"

@@ -1,7 +1,9 @@
 #include "http/HttpRequest.hpp"
 #include "Logger.hpp"
+#include "utils.hpp"
 #include <cerrno>
 #include <cstddef>
+#include <cctype>
 #include <fcntl.h>
 #include <filesystem>
 #include <iostream>
@@ -11,16 +13,76 @@
 #include <sys/socket.h>
 #include "enum/HttpMethod.hpp"
 
+static bool hasChunkedEncoding(const std::string& value) {
+  std::string lower(value);
+  for (std::string::size_type i = 0; i < lower.size(); ++i)
+    lower[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(lower[i])));
+  return lower.find("chunked") != std::string::npos;
+}
 
-HttpRequest::HttpRequest() : _method(HttpMethod::UNKNOWN), _headers(), _body() {
+// Returns false for an incomplete body and true once the terminating chunk is present.
+static bool decodeChunkedBody(const std::string& input, std::string& body) {
+  std::string::size_type offset = 0;
+  body.clear();
+  while (true) {
+    std::string::size_type lineEnd = input.find("\r\n", offset);
+    if (lineEnd == std::string::npos)
+      return false;
+    std::string sizeText = input.substr(offset, lineEnd - offset);
+    std::string::size_type extension = sizeText.find(';');
+    if (extension != std::string::npos)
+      sizeText.erase(extension);
+    std::string::size_type first = sizeText.find_first_not_of(" \t");
+    std::string::size_type last = sizeText.find_last_not_of(" \t");
+    if (first == std::string::npos)
+      return false;
+    sizeText = sizeText.substr(first, last - first + 1);
+    if (sizeText.empty())
+      return false;
+
+    size_t chunkSize = 0;
+    for (std::string::size_type i = 0; i < sizeText.size(); ++i) {
+      unsigned int digit;
+      if (sizeText[i] >= '0' && sizeText[i] <= '9')
+        digit = static_cast<unsigned int>(sizeText[i] - '0');
+      else if (sizeText[i] >= 'a' && sizeText[i] <= 'f')
+        digit = static_cast<unsigned int>(sizeText[i] - 'a' + 10);
+      else if (sizeText[i] >= 'A' && sizeText[i] <= 'F')
+        digit = static_cast<unsigned int>(sizeText[i] - 'A' + 10);
+      else
+        return false;
+      if (chunkSize > (static_cast<size_t>(-1) - digit) / 16)
+        return false;
+      chunkSize = chunkSize * 16 + digit;
+    }
+
+    offset = lineEnd + 2;
+    if (chunkSize == 0) {
+      if (input.compare(offset, 2, "\r\n") == 0)
+        return true;
+      return input.find("\r\n\r\n", offset) != std::string::npos;
+    }
+    if (chunkSize > static_cast<size_t>(-1) - 2 ||
+      input.size() - offset < chunkSize + 2)
+      return false;
+    body.append(input, offset, chunkSize);
+    offset += chunkSize;
+    if (input.compare(offset, 2, "\r\n") != 0)
+      return false;
+    offset += 2;
+  }
+}
+
+
+HttpRequest::HttpRequest() : _method(HttpMethod::UNKNOWN), _headers(), _body(), _bodyComplete(false), _queryString() {
   _methodMap["GET"] = HttpMethod::GET;
   _methodMap["POST"] = HttpMethod::POST;
   _methodMap["DELETE"] = HttpMethod::DELETE;
-  _methodMap["PUT"] = HttpMethod::PUT;
   _methodMap["UNKNOWN"] = HttpMethod::UNKNOWN;
 }
 
 void HttpRequest::parseRequest(std::string buffer) {
+  _bodyComplete = false;
   size_t pos = buffer.find("\r\n\r\n");
   if (pos != std::string::npos) {
     _body = buffer.substr(pos + 4);
@@ -29,13 +91,46 @@ void HttpRequest::parseRequest(std::string buffer) {
 
   size_t headerEnd = buffer.find("\r\n");
   if (headerEnd != std::string::npos) {
-    std::string fristLine = buffer.substr(0, headerEnd);
-    Logger::info(fristLine);
+    std::string firstLine = buffer.substr(0, headerEnd);
+    // Logger::info(firstLine);
 
-    _httpVersion = parseHttpVersion(fristLine);
-    _method = parseMethod(fristLine);
-    _path = parsePathWithQueries(fristLine);
+    _httpVersion = parseHttpVersion(firstLine);
+    _method = parseMethod(firstLine);
+    _path = parsePathWithQueries(firstLine);
     _headers = parseHeaders(buffer.substr(headerEnd + 2));
+    if (hasChunkedEncoding(getHeader("transfer-encoding"))) {
+      std::string decodedBody;
+      _bodyComplete = decodeChunkedBody(_body, decodedBody);
+      if (_bodyComplete)
+        _body = decodedBody;
+    } else {
+      std::string contentLength = getHeader("content-length");
+      if (contentLength.empty()) {
+        _bodyComplete = true;
+      } else {
+        size_t expected = 0;
+        bool validLength = true;
+        for (std::string::size_type i = 0; i < contentLength.size(); ++i) {
+          if (contentLength[i] < '0' || contentLength[i] > '9') {
+            validLength = false;
+            break;
+          }
+          size_t digit = static_cast<size_t>(contentLength[i] - '0');
+          if (expected > (static_cast<size_t>(-1) - digit) / 10) {
+            validLength = false;
+            break;
+          }
+          expected = expected * 10 + digit;
+        }
+        if (!validLength) {
+          _bodyComplete = false;
+        } else {
+          _bodyComplete = _body.size() >= expected;
+          if (_body.size() > expected)
+            _body.resize(expected);
+        }
+      }
+    }
   }
 }
 
@@ -114,8 +209,9 @@ std::string HttpRequest::parsePathWithQueries(std::string req) {
     }
     size_t hasQueries = decoded.find("?");
     if (hasQueries != std::string::npos) {
-      Logger::info("Query detected");
+    //   Logger::info("Query detected");
       path = decoded.substr(0, hasQueries);
+      _queryString = pathWithQueries.substr(pathWithQueries.find("?") + 1);
       _queries = parseQueries(decoded, hasQueries);
       }
       return path.empty() ? decoded : path;
@@ -126,7 +222,7 @@ std::string HttpRequest::parsePathWithQueries(std::string req) {
 
 std::map<std::string, std::string> HttpRequest::parseQueries(std::string decoded, size_t hasQueries) const {
   std::map<std::string, std::string>queriesMap;
-  
+
   size_t start = 0;
   std::string queries = decoded.substr(hasQueries + 1);
   while (start <= queries.length()) {
@@ -169,12 +265,24 @@ std::string HttpRequest::getPath() const {
   return _path;
 }
 
+std::string HttpRequest::getQueryString() const {
+  return _queryString;
+}
+
+std::string HttpRequest::getHttpVersion() const {
+  return _httpVersion;
+}
+
 std::map<std::string, std::string> HttpRequest::getHeaders() const {
   return _headers;
 }
 
 std::string HttpRequest::getBody() const {
   return _body;
+}
+
+bool HttpRequest::isBodyComplete() const {
+  return _bodyComplete;
 }
 
 HttpRequest::~HttpRequest() {}

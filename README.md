@@ -1,9 +1,140 @@
-This project has been created as part of the 42 curriculum by [amartel](https://intra.42.fr/users/amartel), [dnantet](https://intra.42.fr/users/dnantet)
+*This project has been created as part of the 42 curriculum by [amartel](https://intra.42.fr/users/amartel), [dnantet](https://intra.42.fr/users/dnantet)*
 
-# webserv
+# webserv 🌐
+
 503 Service Unavailable
 
 ## Description
 
-Make a basic Http server in C++98
+The goal of this project is to make a basic HTTP server in C++98.
 
+A web server is a system that listens for requests from browsers and sends back the resources needed to display a website.
+
+### How it works
+
+When a user types: `https://example.com`
+
+1. **The browser sends a request**\
+It asks the server: *“Give me the website at example.com.”*
+2. **The request reaches the web server**\
+The server receives the request and figures out what the user is asking for.
+3. **The server finds or creates the response**\
+It might retrieve an HTML file, image, CSS file, or data from a database.
+4. **The server sends the response back**\
+The browser receives the files/data.
+5. **The browser displays the website**\
+It turns the HTML, CSS, and JavaScript into the webpage the user sees.
+
+### Overview
+
+The basic lifecycle of this web server is as follow:
+
+```md
+Load configuration
+    |
+    v
+Start server
+    |
+    v
+Wait for request <---
+    |                |
+    v                |
+Handle request       |
+    |                |
+    v                |
+Send response -------
+```
+
+Here, handling a request can be either displaying a premade `.html` page or executing a script and displaying its output.
+
+## Instructions
+
+After cloning the repository, run `make` at the project's root then execute with
+
+```sh
+./webserv example/<feature>/config.toml
+```
+
+A configuration file is a TOML document. The server reads a `[server]` table and can also accept nested route settings under `[server.route]`-style sections.
+Named route tables use `[server.routes."/url-prefix"]`; CGI scripts on that route are selected by their configured extension.
+
+The server also supports binding to multiple addresses at once with TOML array-table entries. When `[[server.listen]]` blocks are present, each entry creates one listening socket in the same poll loop. Single-listener fields `host` and `port` can still be used as a fallback/default configuration.
+
+Supported server-level parameters:
+
+- **port** = *int* -> the default port the server listens on when no `[[server.listen]]` entry is defined.
+- **host** = *string* -> the default bind address used for the fallback listener.
+- **listen** = *array of tables* -> one or more listeners, each with a `host` and `port` pair.
+- **server_name** = *string* -> the default server name.
+- **file** = *string* -> the default file used for startup/default route handling.
+- **executor** = *string* -> the program used to execute CGI scripts.
+- **cgi_enabled** = *boolean* -> enable or disable CGI execution.
+- **autoindex** = *boolean* -> enable or disable directory listing.
+- **timeout** = *int* -> server poll timeout in milliseconds.
+- **root** = *string* -> base document root.
+- **default_error_page** = *string* -> fallback custom error page. Optional.
+- **error_page_<status>** = *string* -> custom page for a specific error status, for example `error_page_404 = "example/error/404.html"`. Status-specific pages take precedence over generic defaults.
+- **max_body_size** = *int* -> maximum client request body size in bytes.
+
+Supported route-level parameters:
+
+- **root** = *string* -> directory to serve for the route.
+- **methods** = *array of strings* -> accepted HTTP methods.
+- **autoindex** = *boolean* -> enable or disable directory listing for that route.
+- **default_file** = *string* -> file to serve when the route points to a directory.
+- **upload_path** = *string* -> directory where uploaded files are stored.
+- **redirect** = *string* -> redirect target for the route.
+- **cgi_enabled** = *boolean* -> CGI enable/disable for that route.
+- **cgi_extension** = *string* -> file extension to treat as CGI.
+- **executor** = *string* -> route-specific CGI interpreter; defaults to the server-level executor.
+- **default_error_page** = *string* -> route-specific error page. Optional.
+- **error_page_<status>** = *string* -> route-specific page for one status, overriding the server mapping for that route.
+- **max_body_size** = *int* -> maximum request size for the route.
+
+Any configuration file must be in `.toml` format. See [official documentation](https://toml.io/en/).
+
+The server can then be accessed at **localhost:port**, or from any machine connected to the same local network with **<host_ip>:port**.
+
+### Direct HTTP methods test
+
+*Don't forget to change the address and port if necessary.*
+
+- GET
+
+```sh
+curl -i 'http://localhost:8080/example/get/GETME.md'
+```
+
+- POST
+
+```sh
+curl -i -X POST \
+  -d 'Hello, this is a test' \
+  'http://localhost:8080/example/post/getenv.py?debug=1'
+```
+
+- DELETE
+
+```sh
+curl -i -X DELETE http://localhost:8080/assets/DELETEME.md
+```
+
+### Debug
+
+- **bind: Address already in use**\
+List ports with `lsof -i -P -n`, identify PID using the desired port then terminate the process it with `kill <PID>`. **MAKE SURE YOU DON'T TERMINATE ANYTHING IMPORTANT**
+
+## Resources
+
+- HTTP framing: [RFC 9112](https://www.rfc-editor.org/rfc/rfc9112.html), for message format, body length, chunked encoding, connection handling.
+- HTTP semantics: [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html), for methods, status codes, headers, redirects, `Content-Length`.
+- CGI: [RFC 3875](https://www.rfc-editor.org/rfc/rfc3875.html), for meta-variables, script execution, stdin/stdout behavior.
+- HTTP reference: [MDN HTTP messages](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Messages) and [MDN status codes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status).
+
+### About AI
+
+AI was used for :
+
+- explaining concepts and providing documentation
+- setting up the boring stuff and keeping this README up-to-date
+- debugging + stress-testing the CGI and config implementation

@@ -1,0 +1,9 @@
+[server]
+host = "0.0.0.0"
+port = 8080
+autoindex = false
+max_body_size = 1048576
+
+[server.route]
+methods = ["GET"]
+redirect = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"

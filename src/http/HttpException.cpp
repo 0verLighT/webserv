@@ -12,26 +12,41 @@ HttpException::HttpException(HttpStatus::Code code, int socket) : _code(code), _
   _messageCode = getSentenceResponseHttpStatus(_code);
 }
 
-void HttpException::SendExecptionResponse() const {
-  std::string templatePath = "httpError/template/template.html";
-  std::ifstream file(templatePath.c_str());
-  if (!file.is_open()) {
-    Logger::error("Template html error doesn't exit");
-    // Change this with throws
-    return ;
+void HttpException::SendExceptionResponse(const std::string& errorPage) const {
+  std::string content;
+  if (_code >= HttpStatus::BAD_REQUEST && !errorPage.empty()) {
+    std::ifstream customFile(errorPage.c_str());
+    if (customFile.is_open()) {
+      std::stringstream fileContent;
+      fileContent << customFile.rdbuf();
+      content = fileContent.str();
+    } else {
+      Logger::error("Configured error page could not be opened: " + errorPage);
+    }
   }
-  std::stringstream fileContent;
-  fileContent << file.rdbuf();
-  std::string content = fileContent.str();
+
+  if (content.empty() && _code >= HttpStatus::BAD_REQUEST) {
+    std::ifstream templateFile("httpError/template/template.html");
+    if (!templateFile.is_open()) {
+      Logger::error("Template html error doesn't exist");
+      return;
+    }
+    std::stringstream fileContent;
+    fileContent << templateFile.rdbuf();
+    content = fileContent.str();
+  }
 
   replaceAll(content, "{ERROR}", getSentenceResponseHttpStatus(_code));
-  Logger::debug(content);
   HttpResponse res(content, _code, _socket, "text/html");
   res.sendHttpResponse();
 }
 
 const char *HttpException::what() const throw() {
   return _messageCode.c_str();
+}
+
+HttpStatus::Code HttpException::statusCode() const {
+  return _code;
 }
 
 HttpException::~HttpException() throw() {}

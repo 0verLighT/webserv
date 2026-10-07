@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Client.hpp"
+#include "Config.hpp"
 #include "Logger.hpp"
 #include "enum/HttpStatus.hpp"
 #include "http/HttpException.hpp"
@@ -23,11 +24,12 @@
 
 class Server {
   public:
-    Server(int port);
+    Server(const Config& config);
     ~Server();
     void run();
   private:
     int _port;
-    int _socket;
-    sockaddr_in _serverAddress;
+    const Config& _config;
+    std::vector<int> _listenSockets;
+    std::vector<sockaddr_in> _serverAddresses;
 };

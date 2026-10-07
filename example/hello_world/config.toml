@@ -1,0 +1,6 @@
+[server]
+port = 8080
+cgi_enabled = true
+file = "example/hello_world/hello_world.sh"
+cgi_extension = ".sh"
+executor = "/usr/bin/bash"

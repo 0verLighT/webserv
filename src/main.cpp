@@ -1,19 +1,23 @@
 #include "Server.hpp"
 #include <exception>
 #include <iostream>
+#include "CommonGatewayInterface.hpp"
+#include "Config.hpp"
+#include "TomlParser.hpp"
 
 int main(int argc, char **argv) {
-  // until Configuration File aren't aviable
-  if (argc != 1) {
-    std::cerr << "Usage" << std::endl;
+  if (argc != 2) {
+    std::cerr << "Usage: ./webserv <path/to/config>" << std::endl;
     return 1;
   }
-  (void)argv;
   try {
-    Server Server(8080);
+    TomlParser p;
+    p.processInputFile(argv[1]);
+    Config config(p);
+    Server Server(config);
     Server.run();
   } catch (const std::exception& e) {
-    std::cerr << e.what() << std::endl;
+    Logger::error(e.what());
   }
   return 0;
 }
